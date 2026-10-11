@@ -1,7 +1,8 @@
-# IQ Lines
+# IQ Lines: Brain Run (levelup branch)
 
-Connect the dots. Never cross. A browser puzzle game (single self-contained `index.html`, works offline).
+Draw. Level up. Get dangerously smart. A roguelite run on the IQ Lines core: clear procedurally generated
+connect-the-dots boards (never cross!), then pick 1 of 3 level-up cards – Bridges, Ghost Ink, Chain Lightning,
+Phoenix Feather and more – to build a different combo every run. 3 acts, 3 bosses (Lights Out, The Crusher, Dry Spell),
+a daily seed, and a best score that sticks.
 
-Play: https://bjeld.github.io/iq-lines/
-
-Draw a line from each dot to its same-colored twin. Lines can't cross, touch other dots or walls, or leave the board. 20 levels, IQ 85 → 200. Relaxing procedural lo-fi music (toggle with the ♪ button).
+The original IQ Lines lives on `main`. Play this version at https://bjeld.github.io/iq-lines/levelup/
