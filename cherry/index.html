@@ -166,6 +166,8 @@ body[class*=bm-] .cab .bulbs i{animation:chase3 .5s steps(1) infinite}
 @keyframes stoppulse{to{filter:brightness(1.18)}}
 #afTag{position:absolute;top:-9px;right:10px;z-index:2;font-size:10px;font-weight:700;letter-spacing:1px;padding:1px 8px;border-radius:9px;color:#fff;background:linear-gradient(90deg,#ff2d55,#ff9f1a,#22c55e,#9b5cff);box-shadow:0 2px 0 #000;text-shadow:0 1px 0 #000;white-space:nowrap}
 #afTag.hit{animation:afhit .25s steps(2) 8}
+#poolTag{position:absolute;top:-9px;left:10px;z-index:2;font-size:10px;font-weight:700;letter-spacing:1px;padding:1px 8px;border-radius:9px;color:#3a2600;background:linear-gradient(90deg,#ffd23f,#fff3a0);box-shadow:0 2px 0 #000;white-space:nowrap}
+#poolTag.hit{animation:afhit .25s steps(2) 8}
 @keyframes afhit{50%{filter:brightness(2)}}
 .bigwin.af{background:linear-gradient(90deg,#ff2d55,#ff9f1a,#ffe43a,#22c55e,#9b5cff);-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-stroke:4px #2a0030;text-shadow:none;filter:drop-shadow(0 6px 0 #2a0030) drop-shadow(0 0 26px rgba(255,200,60,.8))}
 .fdance{display:none;gap:12px;justify-content:center;margin-bottom:8px}
@@ -247,7 +249,7 @@ body[class*=bm-] .cab .bulbs i{animation:chase3 .5s steps(1) infinite}
     <div class="rgrp"><button class="icon" id="musicBtn" aria-label="Music"></button><button class="icon" id="muteBtn" aria-label="Sound"></button></div>
   </div>
   <div class="leds"><div class="led"><small>CREDITS</small><b id="cred">0</b></div><div class="led jp"><small>IQ JACKPOT</small><b id="jp">0</b></div><div class="led win"><small>WIN</small><b id="win">0</b></div></div>
-  <div class="tb" id="tb"><div class="tbm" data-k="cherry"><canvas width="16" height="16"></canvas><div class="tbbar"><i></i></div><b>0/12</b></div><div class="tbm" data-k="bell"><canvas width="16" height="16"></canvas><div class="tbbar"><i></i></div><b>0/7</b></div><div class="tbm" data-k="bar"><canvas width="16" height="16"></canvas><div class="tbbar"><i></i></div><b>0/1</b></div><div id="afTag"></div><div id="tbLow"></div><div id="tbState"></div></div>
+  <div class="tb" id="tb"><div class="tbm" data-k="cherry"><canvas width="16" height="16"></canvas><div class="tbbar"><i></i></div><b>0/12</b></div><div class="tbm" data-k="bell"><canvas width="16" height="16"></canvas><div class="tbbar"><i></i></div><b>0/7</b></div><div class="tbm" data-k="bar"><canvas width="16" height="16"></canvas><div class="tbbar"><i></i></div><b>0/1</b></div><div id="poolTag">POOL 0</div><div id="afTag"></div><div id="tbLow"></div><div id="tbState"></div></div>
   <div class="cab" id="cab"><div class="bulbs"></div><div class="tabs" id="tabs"></div><div id="boardWrap"><canvas id="board"></canvas></div></div>
   <div class="holds" id="holds"><button class="hold" data-c="0">HOLD</button><button class="hold" data-c="1">HOLD</button><button class="hold" data-c="2">HOLD</button></div>
   <div id="msg"><span id="msgTxt">Press SPIN</span><i id="fuse"></i></div>
@@ -290,7 +292,7 @@ body[class*=bm-] .cab .bulbs i{animation:chase3 .5s steps(1) infinite}
 <canvas id="fx"></canvas>
 <div id="crt"></div>
 <script>
-// ======================= IQ Cherry Lines – rules, reels, routing & solver (CHERRY_LINES_v3_1 · three bonus + all fruits + skill stop) =======================
+// ======================= IQ Cherry Lines – rules, reels, routing & solver (CHERRY_LINES_v4 · Cherry Master-style bonuses + all fruits + skill stop) =======================
 // Board: 100x100 units. 3x3 reel windows separated by gutters. Lines live on a graph:
 //   9 cell nodes, 16 lattice (gutter crossing) nodes, 24 gutter segment nodes.
 // A line visits matching cells and travels through gutters. Every node can carry ONE line:
@@ -309,6 +311,9 @@ const SYMBOLS = {
   bar2: { name: 'Double BAR', col: '#14b8d8', light: '#94f1f8', dark: '#05708c', w: 2.4, pay: [2, 10, 25, 60], bar: 1 },
   seven: { name: 'Red 7', col: '#ff3b3b', light: '#ffb0b0', dark: '#9b0010', w: 1.5, pay: [6, 25, 70, 180] },
   wild: { name: 'IQ Wild', col: '#ff4fb8', light: '#ffc4e6', dark: '#a0006a', w: 0.45, pay: [6, 25, 70, 180] },
+  // bonus-reel-only symbols (weight 0 on the normal reels)
+  superbar: { name: 'Super BAR', col: '#ff3b3b', light: '#ffd23f', dark: '#9b0010', w: 0, pay: [4, 20, 50, 120], bar: 1 },
+  blank: { name: 'Blank', col: '#ffffff', light: '#ffffff', dark: '#999999', w: 0, pay: [0, 0, 0, 0], blank: 1 },
 };
 const ANYBAR = { name: 'Any BAR', col: '#5b7cff', light: '#b6c6ff', dark: '#2a3fb3', pay: [1, 2, 6, 15] };
 const SYM_IDS = Object.keys(SYMBOLS);
@@ -325,6 +330,7 @@ function isAllFruits(g) { const f = g.flat(); return f.every(x => FRUITS.include
 const LONE_CHERRY = 0; // cherries pay as lines; they also charge the Cherry Bonus meter
 function mulberry(seed) { return () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
 const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
+function rollFrom(rng, table) { let tot = 0; for (const k in table) tot += table[k]; let r = rng() * tot; for (const k in table) { r -= table[k]; if (r <= 0) return k; } return Object.keys(table)[0]; }
 function rollSymbol(rng, boost) { const w = k => SYMBOLS[k].w * (boost && boost[k] || 1); let tot = 0; for (const k of SYM_IDS) tot += w(k); let r = rng() * tot; for (const k of SYM_IDS) { r -= w(k); if (r <= 0) return k; } return 'cherry'; }
 // grid[r][c]; holds[c] = true keeps column c
 function spinGrid(rng, prev, holds, boost) { const g = [[], [], []]; for (let c = 0; c < 3; c++) for (let r = 0; r < 3; r++) g[r][c] = holds && holds[c] && prev ? prev[r][c] : rollSymbol(rng, boost); return g; }
@@ -350,6 +356,7 @@ function nodeAt(x, y) { // which graph region a board point is in
 }
 // ---------- symbol classes ----------
 function classOf(syms) { // syms: symbols of cells in the line, in order
+  if (syms.includes('blank')) return null;
   const real = syms.filter(s => s !== 'wild');
   if (!real.length) return 'wild';
   if (real.every(s => s === real[0])) return real[0];
@@ -414,50 +421,57 @@ function anyLineLeft(grid, used, burnt) {
 // polyline of a node path (axis-aligned "circuit trace" through anchors)
 function pathPoints(path) { return path.map(id => ({ x: NODES[id].x, y: NODES[id].y })); }
 
-// ======================= THREE BONUS (Cherry / Bell / BAR) =======================
-// Operator "three bonus conditions" a-b-c = meter thresholds: Cherry needs a, Bell needs b, BAR needs c.
-//   Cherry meter: +1 per drawn cherry line of 3+     Bell meter: +1 per drawn bell line of 3+
-//   BAR meter:    +1 per drawn BAR line worth 6+ bars (BAR = 1, Double BAR = 2, Wild = 1)
+// ======================= THREE BONUS — modelled on Dyna Cherry Master ('91 / I) =======================
+// Researched (see README): 3 cherries on a line -> CHERRY BONUS (1 spin on special reels full of 7s, paid by the
+// number of 7s on screen); 12 cherry pairs -> also a CHERRY BONUS; 7 bell lines -> BELL BONUS (take the POOL + 7 free
+// games); 1BAR-1BAR-1BAR on a line -> 1 BAR BONUS (7 free games with SUPER BARs). Bonus reels carry blank cells.
+// Here: "on a line" = a DRAWN line of exactly 3 cells that is straight (row, column or diagonal = the original 8 lines).
 const CONDITIONS = { '12-7-1': [12, 7, 1], '9-5-1': [9, 5, 1], '6-3-1': [6, 3, 1], '3-2-1': [3, 2, 1] };
 const MIN_BET_OPTS = { 8: 1, 16: 2 }; // "minimum bet for bonus" 8 / 16 credits -> our bet levels (BET 10 / BET 20)
 const BONUS_IDS = ['cherry', 'bell', 'bar'];
 const BONUS = {
-  cherry: { name: 'CHERRY RAIN', spins: 4, rain: 1, single: 1, lineMult: 1, boost: { cherry: 1.1 } },
-  bell: { name: 'BELL RINGER', spins: 4, mult: [1, 1, 1, 3], rings: 1, boost: { bell: 1.15 } },
-  bar: { name: 'BAR UPGRADE', spins: 3, boost: { bar: 1.3, bar2: 1.2 } },
+  cherry: { name: 'CHERRY BONUS', spins: 1, reel: { blank: 10, seven: 1.6, wild: .35, cherry: 3, bar: 2, bar2: 1.2 } },
+  bell: { name: 'BELL BONUS', spins: 7, reel: { blank: 8, bell: 5.5, bar: 2, bar2: 1, seven: 1, wild: .25 }, single: 1 },
+  bar: { name: '1 BAR BONUS', spins: 7, reel: { blank: 8, bar: 4, bar2: 2, superbar: 1.1, seven: 1 }, single: 1 },
 };
+const SEVENS_PAY = [0, 0, 2, 5, 20, 50, 100, 200, 400, 1000]; // CHERRY BONUS: 7s anywhere (IQ Wild counts) -> × stake
+const BLANK_ALL = 50;  // all 9 cells blank during a bonus -> × stake
+const POOL_ADD = { seven: 5, wild: 10 }; // a 7 landing in the CENTRE cell (normal game) adds to the POOL (× bet level)
+const LINES8 = [[0, 1, 2], [3, 4, 5], [6, 7, 8], [0, 3, 6], [1, 4, 7], [2, 5, 8], [0, 4, 8], [2, 4, 6]];
 const getS = (g, id) => g[Math.floor(id / 3)][id % 3];
 const setS = (g, id, v) => { g[Math.floor(id / 3)][id % 3] = v; };
 const ALL9 = [0, 1, 2, 3, 4, 5, 6, 7, 8];
 const orth = id => { const r = Math.floor(id / 3), c = id % 3, o = []; if (r > 0) o.push(id - 3); if (r < 2) o.push(id + 3); if (c > 0) o.push(id - 1); if (c < 2) o.push(id + 1); return o; };
 const barWeight = syms => syms.reduce((a, s) => a + (s === 'bar2' ? 2 : 1), 0);
+// a drawn line of exactly 3 cells, in order along a row / column / diagonal
+function isStraight(cells) { if (cells.length !== 3) return false; return LINES8.some(l => (l[0] === cells[0] && l[1] === cells[1] && l[2] === cells[2]) || (l[2] === cells[0] && l[1] === cells[1] && l[0] === cells[2])); }
+// meters + instant triggers from the lines drawn in a normal game
 function meterGain(lines, grid) {
-  const g = { cherry: 0, bell: 0, bar: 0 };
-  for (const L of lines) { const syms = L.cells.map(id => getS(grid, id));
-    if (L.cls === 'cherry' && L.cells.length >= 3) g.cherry++;
+  const g = { cherry: 0, bell: 0, bar: 0, instant: [] };
+  for (const L of lines) { const syms = L.cells.map(id => getS(grid, id)), st = isStraight(L.cells);
+    if (L.cls === 'cherry') { if (st && syms.every(s => s === 'cherry')) g.instant.push('cherry'); else g.cherry++; } // 3 real cherries straight = instant; pairs & bendy lines count
     if (L.cls === 'bell' && L.cells.length >= 3) g.bell++;
-    if ((L.cls === 'bar' || L.cls === 'bar2' || L.cls === 'anybar') && barWeight(syms) >= 6) g.bar++; }
+    if (L.cls === 'bar' && st) g.bar++; } // 1BAR-1BAR-1BAR straight (IQ Wild may stand in)
   return g;
 }
 function newBonus(mode, level = 1) { return { mode, spin: 0, spins: BONUS[mode].spins, sticky: new Set(), total: 0, level }; }
-// one bonus spin -> { grid: what the reels show, natural: copy for the jackpot check, events: transformations, final: board you draw on }
-function bonusSpin(rng, B) {
-  const mode = B.mode, D = BONUS[mode], g = spinGrid(rng, null, null, D.boost), stick = mode === 'cherry' ? 'cherry' : mode === 'bell' ? 'bell' : null;
-  if (stick) for (const id of B.sticky) setS(g, id, stick);
-  const natural = g.map(r => r.slice()), fin = g.map(r => r.slice()), events = [], pick = a => a[Math.floor(rng() * a.length)];
-  if (mode === 'cherry') for (let k = 0; k < D.rain; k++) { const free = ALL9.filter(id => getS(fin, id) !== 'cherry'); if (!free.length) break; const id = pick(free); events.push({ type: 'rain', cell: id, from: getS(fin, id), to: 'cherry' }); setS(fin, id, 'cherry'); }
-  if (mode === 'bell') for (const id of [...B.sticky].sort(() => rng() - .5).filter(id => orth(id).some(n => getS(fin, n) !== 'bell')).slice(0, D.rings)) { const cand = orth(id).filter(n => getS(fin, n) !== 'bell'); if (!cand.length) continue; const t = pick(cand); events.push({ type: 'ring', src: id, cell: t, from: getS(fin, t), to: 'bell' }); setS(fin, t, 'bell'); }
-  if (mode === 'bar') {
-    const bars = ALL9.filter(id => SYMBOLS[getS(natural, id)].bar);
-    for (const id of bars) { const cand = orth(id).filter(n => { const s = getS(fin, n); return !SYMBOLS[s].bar && s !== 'seven' && s !== 'wild'; }); if (!cand.length) continue; const t = pick(cand); events.push({ type: 'zap', src: id, cell: t, from: getS(fin, t), to: 'bar' }); setS(fin, t, 'bar'); }
-    for (const id of bars) { const f = getS(natural, id), to = f === 'bar' ? 'bar2' : 'seven'; events.push({ type: 'upgrade', cell: id, from: f, to }); setS(fin, id, to); }
-  }
-  return { grid: g, natural, events, final: fin };
+function bonusGrid(rng, mode) { const t = BONUS[mode].reel, g = [[], [], []]; for (let c = 0; c < 3; c++) for (let r = 0; r < 3; r++) g[r][c] = rollFrom(rng, t); return g; }
+// one bonus spin -> { grid, natural, events, final } (no transformations: the special reels ARE the bonus)
+function bonusSpin(rng, B) { const g = bonusGrid(rng, B.mode); return { grid: g, natural: g.map(r => r.slice()), events: [], final: g.map(r => r.slice()) }; }
+function bonusStick() {}
+function bonusMult() { return 1; }
+function bonusPayFn() { return payOf; }
+// scatter pays of a bonus spin, credits at BET 1: [{ cells, amt, label }]
+function bonusExtras(B, lines, grid) {
+  if (!B) return []; const out = [], f = grid.flat();
+  if (f.every(x => x === 'blank')) out.push({ cells: ALL9.slice(), amt: BLANK_ALL * SPIN_COST, label: 'ALL BLANK' });
+  if (B.mode === 'cherry') { const ids = ALL9.filter(id => f[id] === 'seven' || f[id] === 'wild'), m = SEVENS_PAY[ids.length]; if (m) out.push({ cells: ids, amt: m * SPIN_COST, label: `ALL ${ids.length} 7` }); }
+  if (B.mode === 'bell') ALL9.filter(id => f[id] === 'bell').forEach(id => out.push({ cells: [id], amt: BONUS.bell.single, label: 'BELL' }));
+  if (B.mode === 'bar') ALL9.filter(id => f[id] === 'superbar').forEach(id => out.push({ cells: [id], amt: BONUS.bar.single, label: 'SUPER BAR' }));
+  return out;
 }
-function bonusStick(B, final) { const s = B.mode === 'cherry' ? 'cherry' : B.mode === 'bell' ? 'bell' : null; if (s) ALL9.forEach(id => { if (getS(final, id) === s) B.sticky.add(id); }); }
-function bonusMult(B) { return B.mode === 'bell' ? BONUS.bell.mult[Math.max(0, B.spin - 1)] : B.mode === 'cherry' ? BONUS.cherry.lineMult : 1; }
-function bonusPayFn(B) { if (!B) return payOf; const m = bonusMult(B), k = B.mode; return (cls, n) => payOf(cls, n) * ((k === 'bell' && cls === 'bell') || (k === 'cherry' && cls === 'cherry') ? m : 1); }
-function bonusExtra(B, lines, grid) { if (!B || B.mode !== 'cherry') return 0; const used = new Set(lines.flatMap(L => L.cells)); return ALL9.filter(id => getS(grid, id) === 'cherry' && !used.has(id)).length * BONUS.cherry.single; }
+function bonusExtra(B, lines, grid) { return bonusExtras(B, lines, grid).reduce((a, e) => a + e.amt, 0); }
+function poolGain(grid) { const s = grid[1][1]; return POOL_ADD[s] || 0; }
 // W-UP (double up): BIG = 8..K, SMALL = A..6. Payout setting adds Jokers (always lose) so a guess returns ~90% / 80%.
 const WUP_JOKERS = { loss: { 90: 1, 80: 8 }, tie: { 90: 5, 80: 12 } };
 function wupReturn(seven, payout) { const j = WUP_JOKERS[seven][payout]; return seven === 'loss' ? 2 * 24 / (52 + j) : 2 * 24 / (48 + j); }
@@ -500,6 +514,10 @@ function barPlate(fill, dark) { // 16x7 plate reading BAR
 }
 SPR.bar = ['................', '................', '................', '................', ...barPlate('u', 'U'), '................', '................', '................', '................', '................'];
 SPR.bar2 = [...barPlate('t', 'T'), '................', ...barPlate('t', 'T'), '................'];
+// SUPER BAR (1 BAR BONUS only): red plate with gold BAR letters under a gold "SUPER" band (word drawn as text)
+SPR.superbar = ['kkkkkkkkkkkkkkkk', 'kyyyyyyyyyyyyyyk', 'kyyyyyyyyyyyyyyk', 'kyyyyyyyyyyyyyyk', 'kYYYYYYYYYYYYYYk', 'kkkkkkkkkkkkkkkk', ...barPlate('r', 'R'), '................', '................', '................'];
+SPR.blank = Array(16).fill('................');
+let BLANK_TINT = '#ffe0ea';
 const SPRITE_CACHE = {};
 function spriteCanvas(id, dim) {
   const key = id + (dim ? ':d' : ''); if (SPRITE_CACHE[key]) return SPRITE_CACHE[key];
@@ -512,8 +530,10 @@ function spriteCanvas(id, dim) {
   return (SPRITE_CACHE[key] = c);
 }
 function drawSprite(ctx, id, cx, cy, size, { dim = false, stretch = 1, alpha = 1 } = {}) {
+  if (id === 'blank') { ctx.save(); ctx.globalAlpha = alpha; ctx.fillStyle = BLANK_TINT; const h = 24 * stretch; ctx.fillRect(cx - 12, cy - h / 2, 24, h); ctx.fillStyle = 'rgba(255,255,255,.35)'; ctx.fillRect(cx - 12, cy - h / 2, 24, h * .2); ctx.restore(); return; }
   const c = spriteCanvas(id, dim); ctx.save(); ctx.imageSmoothingEnabled = false; ctx.globalAlpha = alpha;
   ctx.drawImage(c, cx - size / 2, cy - size * stretch / 2, size, size * stretch);
+  if (id === 'superbar') { ctx.fillStyle = '#9b0010'; ctx.font = `700 ${size * .2}px Fredoka, sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('SUPER', cx, cy - size * .275 * stretch); }
   if (id === 'wild') { ctx.fillStyle = '#fff'; ctx.strokeStyle = '#5a0040'; ctx.lineWidth = size * .05; ctx.font = `700 ${size * .26}px Fredoka, sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.strokeText('IQ', cx, cy + size * .06 * stretch); ctx.fillText('IQ', cx, cy + size * .06 * stretch); }
   ctx.restore();
 }
@@ -600,7 +620,7 @@ const easeBack = (t, c = 1.1) => 1 + (c + 1) * Math.pow(t - 1, 3) + c * Math.pow
 const easeOut = t => 1 - Math.pow(1 - t, 3);
 const SAVE_KEY = 'iqlines.cherry.v1', START_CREDITS = 500;
 const OP_DEFAULT = { cond: '12-7-1', minBet: 8, wup: true, seven: 'loss', payout: 90, skillStop: true, af: 'fixed' };
-let save = { credits: START_CREDITS, jpBase: JP_BASE, meters: { cherry: 0, bell: 0, bar: 0 }, betIx: 0, muted: false, music: true, crt: false, timer: true, best: 0, spins: 0, refills: 0, seen: {}, op: { ...OP_DEFAULT }, bonusCount: { cherry: 0, bell: 0, bar: 0 }, afPot: ALLFRUIT.base, afHits: 0 };
+let save = { credits: START_CREDITS, jpBase: JP_BASE, meters: { cherry: 0, bell: 0, bar: 0 }, betIx: 0, muted: false, music: true, crt: false, timer: true, best: 0, spins: 0, refills: 0, seen: {}, op: { ...OP_DEFAULT }, bonusCount: { cherry: 0, bell: 0, bar: 0 }, afPot: ALLFRUIT.base, afHits: 0, pool: 0 };
 try { const s = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null'); if (s) { const d = save; save = Object.assign({}, d, s); save.meters = Object.assign({}, d.meters, s.meters); save.op = Object.assign({}, d.op, s.op); save.seen = Object.assign({}, s.seen); save.bonusCount = Object.assign({}, d.bonusCount, s.bonusCount); delete save.meter; if (!CONDITIONS[save.op.cond]) save.op.cond = OP_DEFAULT.cond; save.afPot = clamp(+save.afPot || ALLFRUIT.base, ALLFRUIT.base, ALLFRUIT.max); } } catch (e) {}
 function persist() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch (e) {} }
 const betLevel = () => BET_LEVELS[save.betIx];
@@ -724,7 +744,7 @@ function reelPos(R, now) { // strip position of a spinning column (0 = final sym
   if (t < R.dEnd) return R.P0 - R.V * t;
   const u = Math.min(1, (t - R.dEnd) / R.dDec); return 3 * (1 - easeBack(u, 1.4));
 }
-const THEMES = { none: { g0: '#132a5c', g1: '#0b1638', frame: '#1fc8b4', acc: '#1fc8b4' }, cherry: { g0: '#5c0f30', g1: '#2a0416', frame: '#ff8aa8', acc: '#ff2d55' }, bell: { g0: '#5a3d00', g1: '#241600', frame: '#ffe27a', acc: '#ffc61a' }, bar: { g0: '#0c2f80', g1: '#030c2c', frame: '#7fd0ff', acc: '#2f9bff' } };
+const THEMES = { none: { g0: '#132a5c', g1: '#0b1638', frame: '#1fc8b4', acc: '#1fc8b4' }, cherry: { g0: '#5c0f30', g1: '#2a0416', frame: '#ff8aa8', acc: '#ff2d55', blank: '#ff9cc0' }, bell: { g0: '#5a3d00', g1: '#241600', frame: '#ffe27a', acc: '#ffc61a', blank: '#fff1b8' }, bar: { g0: '#0c2f80', g1: '#030c2c', frame: '#7fd0ff', acc: '#2f9bff', blank: '#8ec8ff' } };
 function winBg(ctx, x, y) { const g = ctx.createLinearGradient(x, y, x, y + 24); g.addColorStop(0, '#d9ccb0'); g.addColorStop(.18, '#fffaf0'); g.addColorStop(.82, '#fff6e2'); g.addColorStop(1, '#cdbd98'); ctx.fillStyle = g; rrect(ctx, x, y, 24, 24, 2.5); ctx.fill(); }
 function bolt(ctx, a, b, seed, amp) { const r = mulberry(seed), n = 7; ctx.beginPath(); ctx.moveTo(a.x, a.y); for (let i = 1; i < n; i++) { const t = i / n; ctx.lineTo(a.x + (b.x - a.x) * t + (r() - .5) * amp, a.y + (b.y - a.y) * t + (r() - .5) * amp); } ctx.lineTo(b.x, b.y); }
 function drawAnim(ctx, A, now, grid) {
@@ -744,7 +764,7 @@ function renderBoard(ctx, px, V) {
   const d = DPR(), now = V.now, s = px * d / 100;
   ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height); ctx.setTransform(s, 0, 0, s, 0, 0);
   // gutter floor
-  const TH = THEMES[V.theme] || THEMES.none, gb = ctx.createLinearGradient(0, 0, 0, 100); gb.addColorStop(0, TH.g0); gb.addColorStop(1, TH.g1); ctx.fillStyle = gb; ctx.fillRect(0, 0, 100, 100);
+  const TH = THEMES[V.theme] || THEMES.none; BLANK_TINT = TH.blank || '#ffe0ea'; const gb = ctx.createLinearGradient(0, 0, 0, 100); gb.addColorStop(0, TH.g0); gb.addColorStop(1, TH.g1); ctx.fillStyle = gb; ctx.fillRect(0, 0, 100, 100);
   ctx.strokeStyle = 'rgba(120,180,255,.07)'; ctx.lineWidth = .4; for (let k = 2; k < 100; k += 4) { ctx.beginPath(); ctx.moveTo(k, 0); ctx.lineTo(k, 100); ctx.moveTo(0, k); ctx.lineTo(100, k); ctx.stroke(); }
   const lineOf = new Map(); (V.lines || []).forEach((L, i) => L.cells.forEach(c => lineOf.set(c, i)));
   const drawCells = V.drawing ? V.drawing.cells : [];
@@ -820,13 +840,13 @@ let S = 300, DS = 260;
 function boardToScreen(p, cv = boardCv) { const r = cv.getBoundingClientRect(); return { x: r.left + p.x / 100 * r.width, y: r.top + p.y / 100 * r.height }; }
 function msg(t) { $('msgTxt').textContent = t; }
 function ledPop(id) { const el = $(id).parentNode; el.classList.remove('pop'); void el.offsetWidth; el.classList.add('pop'); }
-function makeReels(prev, next, holds, now, anticipCol, ts, rng) {
+function makeReels(prev, next, holds, now, anticipCol, ts, rng, fill) {
   const stops = [.7, 1.05, 1.4], reels = [];
   for (let c = 0; c < 3; c++) {
     if (holds[c]) { reels.push(null); continue; }
     const tStop = stops[c] + (c === anticipCol ? 1.45 : 0), dDec = .42, dEnd = tStop - dDec, P0 = Math.round(3 + 25 * dEnd), V = (P0 - 3) / dEnd, strip = [];
     for (let r = 0; r < 3; r++) strip[r] = next[r][c];
-    for (let i = 3; i < P0; i++) strip[i] = rollSymbol(rng);
+    for (let i = 3; i < P0; i++) strip[i] = fill ? fill() : rollSymbol(rng);
     for (let r = 0; r < 3; r++) strip[P0 + r] = prev[r][c];
     reels.push({ spinning: true, t0: now, P0, V, dEnd, dDec, ts, strip, lastI: P0, tStop });
   }
@@ -853,7 +873,7 @@ function doSpin() {
   G.lines = []; G.used = new Uint8Array(NODES.length); G.burnt = new Set(); G.drawing = null; G.hint = null; G.flash = null; G.win = 0;
   G.canHold = false; G.heldShow = holds.some(x => x) ? holds : null; G.holds = [false, false, false];
   G.anticipCol = !holds[2] && hotCount(next, [0, 1]) >= 2 ? 2 : -1; G.anticip = -1;
-  G.reels = makeReels(prev, next, holds, performance.now(), G.anticipCol, TS, G.vis);
+  G.reels = makeReels(prev, next, holds, performance.now(), G.anticipCol, TS, G.vis, B ? () => rollFrom(G.vis, BONUS[B.mode].reel) : null);
   G.spinT0 = performance.now(); G.stopLog = []; G.af = null; G.planned = next.map(r => r.slice()); G.phase = 'spin'; Sfx.lever(); msg(B ? `${BONUS[B.mode].name} · FREE SPIN ${B.spin}/${B.spins}` : 'Good luck!'); hud();
 }
 // ---------- tap-to-stop (the result is fixed when the spin starts; stopping only lands the planned symbols sooner) ----------
@@ -881,14 +901,23 @@ async function afterSpin() {
   G.phase = 'transform'; G.anticip = -1; G.heldShow = null; hud();
   const B = G.bonus;
   if (!B && isAllFruits(G.natural)) await allFruits();
+  if (!B && poolGain(G.natural)) poolAdd(poolGain(G.natural) * betLevel());
   if (B && G.pendingEv.length) await runEvents(G.pendingEv);
   if (B) { if (G.pendingFinal) G.grid = G.pendingFinal; bonusStick(B, G.grid); }
   G.pendingEv = []; G.pendingFinal = null;
   G.phase = 'draw';
   G.timerEnd = save.timer ? performance.now() + DRAW_TIME * 1000 / TS : 0; G.timerSec = DRAW_TIME; G.hintUsed = false;
-  if (!anyLineLeft(G.grid, G.used, G.burnt)) { msg(B && B.mode === 'cherry' ? 'No line — single cherries still pay!' : 'No matching pair this time…'); setTimeout(endDraw, 900 / TS); }
-  else msg(B ? (B.mode === 'cherry' ? 'Cherry lines pay — and every loose cherry pays too!' : B.mode === 'bell' ? `Draw the bells! Bell lines ×${bonusMult(B)} this spin` : 'Upgraded! Draw your BAR and 7 lines') : 'DRAW your paylines! Drag from a symbol to its twins');
+  if (!anyLineLeft(G.grid, G.used, G.burnt)) { msg(B ? 'No line — scatter pays still count!' : 'No matching pair this time…'); setTimeout(endDraw, 900 / TS); }
+  else msg(B ? (B.mode === 'cherry' ? 'Count the 7s! Then draw any lines you can' : B.mode === 'bell' ? 'Every bell pays! Draw your bell lines' : 'SUPER BARs pay double! Draw your BAR lines') : 'DRAW your paylines! Drag from a symbol to its twins');
   hud();
+}
+function poolAdd(n) { save.pool = (save.pool || 0) + n; persist(); const el = $('poolTag'); el.classList.remove('hit'); void el.offsetWidth; el.classList.add('hit'); const c = boardToScreen(cellXY(4)); popText(c.x, c.y - 10, `CENTRE 7 · POOL +${n}`, 'gold'); Sfx.meter(); hud(); }
+async function poolTake() {
+  const amt = save.pool || 0; if (!amt) return; save.pool = 0; G.bonus.total += amt;
+  const start = save.credits; save.credits += amt; save.best = Math.max(save.best, amt); persist(); G.credShow = start; msg(`BELL BONUS takes the POOL: +${amt}!`);
+  const n = clamp(Math.ceil(amt / SPIN_COST), 4, 18); let k = 0;
+  coinFly(centerOf($('poolTag')), centerOf($('cred').parentNode), n, () => { k++; Sfx.coin(); G.credShow = Math.round(start + amt * k / n); hud(); });
+  await wait(600 + n * 60); G.credShow = null; ledPop('cred'); hud();
 }
 const afAmount = () => save.op.af === 'prog' ? Math.floor(save.afPot) * betLevel() : ALLFRUIT.fixed * SPIN_COST * betLevel();
 async function allFruits() {
@@ -1003,9 +1032,10 @@ async function endDraw() {
       await wait(560);
     }
   }
-  if (B && B.mode === 'cherry') {
-    const used = new Set(G.lines.flatMap(L => L.cells)), singles = ALL9.filter(id => getS(G.grid, id) === 'cherry' && !used.has(id));
-    if (singles.length) { msg('Loose cherries pay too!'); for (const id of singles) { const p = BONUS.cherry.single * m; total += p; G.win = total; const sc = boardToScreen(cellXY(id)); popText(sc.x, sc.y, '+' + p, 'red'); burst(sc.x, sc.y, '#ff2d55', 12, 4); Sfx.coin(); hud(); await wait(220); } }
+  if (B) for (const e of bonusExtras(B, G.lines, G.grid)) {
+    const p = e.amt * m; total += p; G.win = total; G.flash = G.flash || new Set(); G.pop = { id: e.cells[0], t0: performance.now() };
+    const big = e.cells.length > 1, sc = boardToScreen(big ? cellXY(4) : cellXY(e.cells[0])); popText(sc.x, sc.y - (big ? 14 : 0), big ? `${e.label}!  +${p}` : '+' + p, big ? 'gold' : 'red');
+    burst(sc.x, sc.y, e.label === 'BELL' ? '#ffd23f' : e.label === 'SUPER BAR' ? '#ff3b3b' : '#ff2d55', big ? 30 : 12, big ? 7 : 4); big ? Sfx.lineWin(4) : Sfx.coin(); ledPop('win'); hud(); await wait(big ? 700 : 220);
   }
   if (G.lines.some(L => L.jp)) { jp = jackpotNow(); total += jp; save.jpBase = JP_BASE; }
   G.win = total; hud();
@@ -1022,8 +1052,9 @@ async function endDraw() {
   G.phase = 'result'; msg(`WIN ${total}! COLLECT it — or W-UP: double-or-nothing`); hud();
 }
 async function chargeMeters() {
-  const gain = meterGain(G.lines, G.grid); if (!BONUS_IDS.some(k => gain[k])) return;
-  if (!bonusBetOk()) { toast(`Bonus meters only charge at BET ${minBetStake()}+`, 2200); return; }
+  const gain = meterGain(G.lines, G.grid); if (!BONUS_IDS.some(k => gain[k]) && !gain.instant.length) return;
+  if (!bonusBetOk()) { toast(`Bonuses only trigger at BET ${minBetStake()}+`, 2200); return; }
+  for (const k of gain.instant) { G.queue.push(k + '*'); toast('3 CHERRIES ON A STRAIGHT LINE — CHERRY BONUS!', 2400); Sfx.tease(); }
   BONUS_IDS.forEach(k => { if (!gain[k]) return; save.meters[k] += gain[k]; const el = document.querySelector(`.tbm[data-k=${k}]`); el.classList.remove('pop'); void el.offsetWidth; el.classList.add('pop'); const c = centerOf(el); popText(c.x, c.y - 6, `+${gain[k]} ${k.toUpperCase()}`, k === 'cherry' ? 'red' : 'gold'); burst(c.x, c.y, k === 'cherry' ? '#ff2d55' : k === 'bell' ? '#ffd23f' : '#2f7bff', 14, 4); });
   Sfx.meter(); persist(); hud(); queueReady(); await wait(450);
 }
@@ -1046,20 +1077,20 @@ function afterRound() {
   hud();
 }
 const BONUS_INFO = {
-  cherry: { icon: 'cherry', sub: `${BONUS.cherry.spins} FREE SPINS · IT RAINS CHERRIES`, short: 'Cherries stick, it rains cherries, loose cherries pay!',
-    rules: [`${BONUS.cherry.spins} free spins at your bet.`, 'Every cherry that lands is <b>sticky</b> — it stays for the rest of the bonus.', `After each spin <b>${BONUS.cherry.rain} cherry rains down</b> onto the board.`, 'Draw cherry lines as usual — and every <b>loose cherry pays ' + BONUS.cherry.single + '</b> on its own.', 'The board fills up: aim for one huge cherry snake at the end.'] },
-  bell: { icon: 'bell', sub: `${BONUS.bell.spins} FREE SPINS · RING THE BELLS`, short: 'Bells stick and ring a neighbour into a bell. Bell lines pay more each spin!',
-    rules: [`${BONUS.bell.spins} free spins at your bet.`, 'Every bell is <b>sticky</b>.', 'Before you draw, a sticky bell <b>rings</b> and turns a neighbour into a bell.', `Bell lines pay <b>${BONUS.bell.mult.map(x => '×' + x).join(' → ')}</b> on spins 1–${BONUS.bell.spins}.`, 'Build one giant bell chain for the final ring!'] },
-  bar: { icon: 'bar2', sub: `${BONUS.bar.spins} FREE SPINS · BARS TRANSFORM`, short: 'BARs zap neighbours into BARs, then upgrade: BAR → Double BAR → 7!',
-    rules: [`${BONUS.bar.spins} free spins at your bet; BARs land more often.`, 'Before you draw, every BAR <b>zaps a neighbour</b> into a BAR…', '…then <b>upgrades</b>: BAR → Double BAR, Double BAR → RED 7.', 'Then draw your lines on the transformed board.', '7s made by upgrades pay as 7s (the IQ Jackpot needs 7s that landed).'] },
+  cherry: { icon: 'cherry', sub: 'ONE SPIN ON THE 7s REELS · COUNT THE 7s', short: 'One spin on pink reels packed with 7s — every 7 on screen counts!',
+    rules: ['Triggered by <b>3 cherries on a straight line</b> (row, column or diagonal, drawn as a 3-cell line) — or when the cherry meter is full.', '<b>One spin</b> on special pink reels: blanks, RED 7s, BARs and cherries.', `7s pay <b>anywhere</b>: ${SEVENS_PAY.map((v, i) => v ? `${i}×7 = ${v}×` : '').filter(Boolean).join(' · ')} your stake (IQ Wild counts as a 7).`, 'Then draw any lines as usual. All 9 blank pays ' + BLANK_ALL + '× stake.'] },
+  bell: { icon: 'bell', sub: `TAKE THE POOL + ${BONUS.bell.spins} FREE GAMES`, short: 'You take the POOL, then every bell pays on its own!',
+    rules: [`Starts by paying you the <b>POOL</b> — it grows every time a RED 7 lands in the centre cell (+${POOL_ADD.seven}, IQ Wild +${POOL_ADD.wild}, × bet level).`, `Then <b>${BONUS.bell.spins} free games</b> on special reels with blanks, bells, BARs and 7s.`, `Every bell on screen pays <b>${BONUS.bell.single}</b> (× bet level) — and bell lines pay as usual.`, 'All 9 blank pays ' + BLANK_ALL + '× stake.'] },
+  bar: { icon: 'superbar', sub: `${BONUS.bar.spins} FREE GAMES · SUPER BARs`, short: 'SUPER BARs pay double the Double BAR!',
+    rules: ['Triggered by <b>3 single BARs on a straight line</b> (row, column or diagonal, drawn as a 3-cell line).', `<b>${BONUS.bar.spins} free games</b> on special reels with blanks, BARs and <b>SUPER BARs</b>.`, `SUPER BAR lines pay ${SYMBOLS.superbar.pay.join(' / ')} (×2–×5) and mix with other BARs; each SUPER BAR on screen also pays ${BONUS.bar.single}.`, 'All 9 blank pays ' + BLANK_ALL + '× stake.'] },
 };
 function startBonus(mode) {
-  const i = BONUS_IDS.indexOf(mode); save.meters[mode] = Math.max(0, save.meters[mode] - cond()[i]); save.bonusCount[mode] = (save.bonusCount[mode] || 0) + 1; persist();
+  const inst = mode.endsWith('*'); mode = mode.replace('*', ''); const i = BONUS_IDS.indexOf(mode); if (!inst) save.meters[mode] = Math.max(0, save.meters[mode] - cond()[i]); save.bonusCount[mode] = (save.bonusCount[mode] || 0) + 1; persist();
   G.bonus = newBonus(mode, betLevel()); G.canHold = false; G.holds = [false, false, false];
   const f = $('flash'); f.classList.remove('go'); void f.offsetWidth; f.classList.add('go');
   $('cab').classList.add('frenzy'); document.body.classList.add('bm-' + mode);
   Sfx.bonusJingle(mode); Music.setMood(mode); Music.duck(2.6);
-  const I = BONUS_INFO[mode]; $('bTitle').textContent = BONUS[mode].name.replace(' ', '\n'); $('bTitle').style.whiteSpace = 'pre-line'; $('bTitle').className = 'bigwin bTitle ' + mode;
+  const I = BONUS_INFO[mode]; $('bTitle').textContent = BONUS[mode].name.replace(/ (?=BONUS)/, '\n'); $('bTitle').style.whiteSpace = 'pre-line'; $('bTitle').className = 'bigwin bTitle ' + mode;
   const ic = $('bIcon').getContext('2d'); ic.clearRect(0, 0, 16, 16); ic.imageSmoothingEnabled = false; drawSprite(ic, I.icon, 8, 8, 16);
   $('bSub').textContent = I.sub;
   const first = !save.seen[mode]; $('bRules').innerHTML = first ? `<h4>HOW ${BONUS[mode].name} WORKS</h4><ol>${I.rules.map(r => `<li>${r}</li>`).join('')}</ol>` : I.short;
@@ -1069,7 +1100,7 @@ function startBonus(mode) {
 }
 async function endBonus() {
   const B = G.bonus; G.bonus = null; G.phase = 'settle'; hud();
-  await bigWin(BONUS[B.mode].name, B.total, false, `BONUS TOTAL · ${B.spins} FREE SPINS`);
+  await bigWin(BONUS[B.mode].name, B.total, false, B.spins > 1 ? `BONUS TOTAL · ${B.spins} FREE GAMES` : 'BONUS TOTAL · 7s SPIN');
   document.body.classList.remove('bm-' + B.mode); Music.setMood('play');
   G.phase = 'idle'; msg(`${BONUS[B.mode].name} paid ${B.total} in total! Press SPIN`); afterRound();
 }
@@ -1142,7 +1173,7 @@ function renderOp() {
   $('svRows').innerHTML = OP_ROWS.map((R, i) => `<button class="svrow ${R.k == null || (R.dep && !save.op[R.dep]) ? 'dis' : ''}" data-i="${i}"><span class="k">SW ${R.sw.padEnd(3, ' ')} ${R.label}</span><span class="v">${R.fmt(opGet(R))}</span></button>`).join('');
   $('svRows').querySelectorAll('.svrow').forEach(b => b.onclick = () => { const R = OP_ROWS[+b.dataset.i]; if (R.k == null || (R.dep && !save.op[R.dep])) return; const v = R.vals[(R.vals.indexOf(opGet(R)) + 1) % R.vals.length]; if (R.root) save[R.k] = v; else save.op[R.k] = v; persist(); Sfx.click(); renderOp(); hud(); });
   const c = cond();
-  $('svNote').innerHTML = `<b>THREE BONUS CONDITION ${save.op.cond}</b> — our reading of the Cherry Master '91 operator setting (designed in its spirit, not an emulation): the three numbers are the meter targets. <b>CHERRY</b> fills by 1 per drawn cherry line of 3+ (needs ${c[0]}), <b>BELL</b> by 1 per drawn bell line of 3+ (needs ${c[1]}), <b>BAR</b> by 1 per drawn BAR line worth 6+ bars, Double BAR = 2 (needs ${c[2]}). Lower numbers = more frequent bonuses and a looser machine (skilled-play return ≈ 1.04 at 12-7-1, 1.09 at 9-5-1, 1.2 at 6-3-1, 1.44 at 3-2-1 — fun credits only).<br>
+  $('svNote').innerHTML = `<b>THREE BONUS CONDITION ${save.op.cond}</b> — modelled on Dyna Cherry Master '91 / I. Cherry number = cherry pairs for a CHERRY BONUS (here: +1 per drawn cherry line that is not a straight 3-cherry line; needs ${c[0]}); a straight 3-cell line of 3 cherries gives a CHERRY BONUS at once. Bell number = bell lines of 3+ for a BELL BONUS (needs ${c[1]}). BAR number = straight lines of 3 single BARs for a 1 BAR BONUS (needs ${c[2]}). Lower numbers = more bonuses, looser machine (skilled return ≈1.02–1.05 at 12-7-1 — fun credits only).<br>
   <b>MIN. BET</b> — meters only charge at or above it. "8" maps to our smallest stake (BET 10), "16" to BET 20+.<br>
   <b>W-UP</b> — BIG (8–K) or SMALL (A–6). "7" is a LOSS or a TIE (push). <b>PAYOUT</b> 90% / 80% is set by Jokers shuffled into the 52-card deck (a Joker always loses): 7=LOSS uses +1 / +8 Jokers, 7=TIE +5 / +12, so a guess returns ≈90.6% / 80.0%. Disabled = wins are collected automatically.<br>
   <b>SKILL STOP</b> — ON: while the reels spin, tap a reel to stop it, STOP stops the next reel left→right, hold STOP (or keep tapping) to stop all. The result is fixed when the spin starts, so stopping never changes what lands — it only lands sooner. OFF: reels stop by themselves.<br>
@@ -1160,7 +1191,8 @@ function hud() {
   document.querySelectorAll('.tbm').forEach((el, i) => { const k = el.dataset.k, v = save.meters[k] || 0; el.querySelector('i').style.width = Math.min(1, v / th[i]) * 100 + '%'; el.querySelector('b').textContent = `${Math.min(v, th[i])}/${th[i]}`; el.classList.toggle('hot', th[i] > 1 && v >= th[i] - 1); });
   $('tb').classList.toggle('low', !bonusBetOk() && !B); $('tbLow').textContent = `BET ${minBetStake()}+ TO CHARGE THE BONUS METERS`;
   $('afTag').textContent = `ALL FRUITS ${afAmount()}${save.op.af === 'prog' ? ' POT' : ''}`;
-  $('tbState').textContent = B ? `${BONUS[B.mode].name} · SPIN ${Math.max(1, B.spin)}/${B.spins} · WON ${B.total}${B.mode === 'bell' ? ' · BELLS ×' + bonusMult(B.spin ? B : { ...B, spin: 1 }) : ''}` : '';
+  $('tbState').textContent = B ? `${BONUS[B.mode].name} · SPIN ${Math.max(1, B.spin)}/${B.spins} · WON ${B.total}` : '';
+  $('poolTag').textContent = `POOL ${save.pool || 0}`;
   const ph = G.phase, sb = $('spinBtn');
   sb.style.display = ph === 'result' || ph === 'gamble' ? 'none' : ''; $('collectRow').classList.toggle('on', ph === 'result');
   const stopping = ph === 'spin' && save.op.skillStop;
@@ -1244,7 +1276,7 @@ function buildPaytable() {
   const c = cond();
   $('rules').innerHTML = `<b>How a round works:</b> pay ${SPIN_COST * lv} and SPIN. Then DRAW paylines: drag from a symbol through the gutters to matching symbols. Longer chains pay much more. <b>Lines may never touch or cross</b> — every gutter and crossing holds ONE line; touching another line BUSTS the new one. Press DONE (or let the ${DRAW_TIME}s fuse run out) to get paid, then COLLECT or W-UP.<br><br>
   <b>IQ Wild</b> joins any line; wild-only lines pay as 7s. <b>Any BAR</b>: mix BAR + Double BAR. <b>ALL FRUITS</b>: if all 9 symbols that land are fruit and all four kinds (cherry, orange, plum, melon) show, you win ${save.op.af === 'prog' ? 'the fruit pot (' + afAmount() + ' now)' : ALLFRUIT.fixed + '× your stake (' + afAmount() + ')'} instantly — before you draw. <b>STOP</b>: tap a reel or press STOP while spinning to stop early (results are decided at SPIN).<br><br><b>IQ Jackpot</b>: one line through 3+ RED 7s that landed wins the pot (grows every spin, scales with bet). <b>HOLD</b>: after a losing spin, hold up to 2 reels.<br><br>
-  <b>THREE BONUS</b> (condition ${save.op.cond}): <b>CHERRY RAIN</b> after ${c[0]} cherry lines of 3+ · <b>BELL RINGER</b> after ${c[1]} bell lines of 3+ · <b>BAR UPGRADE</b> after ${c[2]} BAR line worth 6+ bars (Double BAR = 2). Meters charge at BET ${minBetStake()}+.<br><br>
+  <b>THREE BONUS</b> (condition ${save.op.cond}, Cherry Master style): <b>CHERRY BONUS</b> at once for 3 cherries on a straight 3-cell line (row/column/diagonal), or after ${c[0]} other cherry lines (pairs count) — one spin on 7s reels, 7s pay anywhere (2×7 = 2× stake … 9×7 = 1000×) · <b>BELL BONUS</b> after ${c[1]} bell lines of 3+ — take the POOL (grows with every RED 7 in the centre) + ${BONUS.bell.spins} free games, every bell pays · <b>1 BAR BONUS</b> for ${c[2]} straight line of 3 single BARs — ${BONUS.bar.spins} free games with SUPER BARs. Bonuses need BET ${minBetStake()}+.<br><br>
   <b>W-UP</b>: BIG (8–K) or SMALL (A–6), up to 5 doubles; 7 = ${save.op.seven.toUpperCase()}; Jokers always lose. Operator settings: ⚙ SERVICE on the title screen.<br><br>
   Fun credits only — no real money, nothing to buy. Broke? You get a free refill. <button class="btn glass" id="timerBtn" style="color:#1a0b22;border-color:#9b8cc8;font-size:13px;padding:5px 12px">Draw timer: ${save.timer ? 'ON' : 'OFF'}</button>`;
   $('timerBtn').onclick = () => { save.timer = !save.timer; persist(); Sfx.click(); buildPaytable(); };
@@ -1270,7 +1302,9 @@ document.querySelectorAll('.hold').forEach((b, i) => b.onclick = () => { if (!(G
 $('musicBtn').onclick = $('musicBtn2').onclick = toggleMusic; $('muteBtn').onclick = $('muteBtn2').onclick = toggleMute; $('crtBtn2').onclick = toggleCrt;
 $('ptBtn').onclick = () => { Sfx.unlock(); Sfx.click(); buildPaytable(); showOv('ptOv', true); };
 $('ptClose').onclick = () => { Sfx.click(); showOv('ptOv', false); };
-$('bonusGo').onclick = () => { const m = $('bonusGo').dataset.mode; Sfx.click(); showOv('bonusOv', false); $('cab').classList.remove('frenzy'); if (m) { save.seen[m] = 1; persist(); } if (G.bonus) msg(`${BONUS[G.bonus.mode].name} · FREE SPIN 1/${G.bonus.spins} — press SPIN`); hud(); };
+$('bonusGo').onclick = async () => { const m = $('bonusGo').dataset.mode; Sfx.click(); showOv('bonusOv', false); $('cab').classList.remove('frenzy'); if (m) { save.seen[m] = 1; persist(); } hud();
+  if (G.bonus && G.bonus.mode === 'bell' && save.pool > 0 && !G.bonus.poolDone) { G.bonus.poolDone = 1; const ph = G.phase; G.phase = 'collect'; hud(); await poolTake(); G.phase = ph; }
+  if (G.bonus) msg(`${BONUS[G.bonus.mode].name} · ${G.bonus.spins > 1 ? 'FREE GAME 1/' + G.bonus.spins : 'YOUR 7s SPIN'} — press SPIN`); hud(); };
 $('svcBtn').onclick = () => { Sfx.unlock(); Sfx.click(); renderOp(); showOv('opOv', true); };
 $('svExit').onclick = () => { Sfx.click(); showOv('opOv', false); hud(); };
 $('svReset').onclick = () => { save.meters = { cherry: 0, bell: 0, bar: 0 }; persist(); Sfx.click(); toast('Bonus meters reset'); hud(); };
@@ -1294,10 +1328,10 @@ document.querySelectorAll('.tbm').forEach(el => { const c = el.querySelector('ca
 layout(); hud(); requestAnimationFrame(frame);
 // ---------- test hooks ----------
 window.__iq = {
-  marker: 'CHERRY_LINES_v3_1', stopReel, stopNext, stopAll, canStop, isAllFruits, afAmount, ALLFRUIT, G, save, demo, NODES, SYMBOLS, solveBoard, anyLineLeft, payOf, classOf,
+  marker: 'CHERRY_LINES_v4', stopReel, stopNext, stopAll, canStop, isAllFruits, afAmount, ALLFRUIT, G, save, demo, NODES, SYMBOLS, solveBoard, anyLineLeft, payOf, classOf,
   seed(n) { G.rng = mulberry(n); }, trigger(mode) { if (G.phase !== 'idle' || G.bonus) return false; G.queue.push(mode); afterRound(); return true; }, forceCard(c) { G.forcedCard = c; }, setOp(o) { Object.assign(save.op, o); persist(); hud(); }, curPayFn, cond, BONUS, CONDITIONS, force(grid) { G.forced = grid; }, fast(v) { TS = v; },
   boardClient(x, y) { return boardToScreen({ x, y }); }, pathPoints, mult, betLevel, jackpotNow,
-  state() { return { phase: G.phase, credits: save.credits, win: G.win, lines: G.lines.map(L => ({ cells: L.cells, cls: L.cls, base: L.base })), burnt: [...G.burnt], grid: G.grid, canHold: G.canHold, holds: G.holds, meters: { ...save.meters }, bonus: G.bonus && { mode: G.bonus.mode, spin: G.bonus.spin, spins: G.bonus.spins, total: G.bonus.total, sticky: [...G.bonus.sticky] }, queue: G.queue.slice(), op: { ...save.op }, natural: G.natural, jp: jackpotNow(), bet: betLevel(), gam: G.gam && { amt: G.gam.amt, steps: G.gam.steps, last: G.gam.last, hist: G.gam.hist.slice(), busy: G.gam.busy } }; },
+  state() { return { pool: save.pool, phase: G.phase, credits: save.credits, win: G.win, lines: G.lines.map(L => ({ cells: L.cells, cls: L.cls, base: L.base })), burnt: [...G.burnt], grid: G.grid, canHold: G.canHold, holds: G.holds, meters: { ...save.meters }, bonus: G.bonus && { mode: G.bonus.mode, spin: G.bonus.spin, spins: G.bonus.spins, total: G.bonus.total, sticky: [...G.bonus.sticky] }, queue: G.queue.slice(), op: { ...save.op }, natural: G.natural, jp: jackpotNow(), bet: betLevel(), gam: G.gam && { amt: G.gam.amt, steps: G.gam.steps, last: G.gam.last, hist: G.gam.hist.slice(), busy: G.gam.busy } }; },
   renderChipOffline,
 };
 
