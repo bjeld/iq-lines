@@ -290,7 +290,7 @@ body[class*=bm-] .cab .bulbs i{animation:chase3 .5s steps(1) infinite}
 <canvas id="fx"></canvas>
 <div id="crt"></div>
 <script>
-// ======================= IQ Cherry Lines – rules, reels, routing & solver (CHERRY_LINES_v3 · three bonus + all fruits + skill stop) =======================
+// ======================= IQ Cherry Lines – rules, reels, routing & solver (CHERRY_LINES_v3_1 · three bonus + all fruits + skill stop) =======================
 // Board: 100x100 units. 3x3 reel windows separated by gutters. Lines live on a graph:
 //   9 cell nodes, 16 lattice (gutter crossing) nodes, 24 gutter segment nodes.
 // A line visits matching cells and travels through gutters. Every node can carry ONE line:
@@ -319,7 +319,7 @@ const DRAW_TIME = 20;
 // ALL FRUITS: the natural 9-cell grid is all fruit (cherry/orange/plum/melon) AND all four kinds are present.
 // Pays instantly (no drawing needed). fixed = ×stake; progressive pot is in credits at BET 1 (scaled by bet level).
 const FRUITS = ['cherry', 'orange', 'plum', 'melon'];
-const ALLFRUIT = { fixed: 3, base: 100, grow: 1, max: 500 };
+const ALLFRUIT = { fixed: 3, base: 30, grow: 0.2, max: 150 };
 function isAllFruits(g) { const f = g.flat(); return f.every(x => FRUITS.includes(x)) && FRUITS.every(k => f.includes(k)); }
 
 const LONE_CHERRY = 0; // cherries pay as lines; they also charge the Cherry Bonus meter
@@ -601,7 +601,7 @@ const easeOut = t => 1 - Math.pow(1 - t, 3);
 const SAVE_KEY = 'iqlines.cherry.v1', START_CREDITS = 500;
 const OP_DEFAULT = { cond: '12-7-1', minBet: 8, wup: true, seven: 'loss', payout: 90, skillStop: true, af: 'fixed' };
 let save = { credits: START_CREDITS, jpBase: JP_BASE, meters: { cherry: 0, bell: 0, bar: 0 }, betIx: 0, muted: false, music: true, crt: false, timer: true, best: 0, spins: 0, refills: 0, seen: {}, op: { ...OP_DEFAULT }, bonusCount: { cherry: 0, bell: 0, bar: 0 }, afPot: ALLFRUIT.base, afHits: 0 };
-try { const s = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null'); if (s) { const d = save; save = Object.assign({}, d, s); save.meters = Object.assign({}, d.meters, s.meters); save.op = Object.assign({}, d.op, s.op); save.seen = Object.assign({}, s.seen); save.bonusCount = Object.assign({}, d.bonusCount, s.bonusCount); delete save.meter; if (!CONDITIONS[save.op.cond]) save.op.cond = OP_DEFAULT.cond; } } catch (e) {}
+try { const s = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null'); if (s) { const d = save; save = Object.assign({}, d, s); save.meters = Object.assign({}, d.meters, s.meters); save.op = Object.assign({}, d.op, s.op); save.seen = Object.assign({}, s.seen); save.bonusCount = Object.assign({}, d.bonusCount, s.bonusCount); delete save.meter; if (!CONDITIONS[save.op.cond]) save.op.cond = OP_DEFAULT.cond; save.afPot = clamp(+save.afPot || ALLFRUIT.base, ALLFRUIT.base, ALLFRUIT.max); } } catch (e) {}
 function persist() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch (e) {} }
 const betLevel = () => BET_LEVELS[save.betIx];
 const jackpotNow = () => Math.floor(save.jpBase * betLevel());
@@ -1146,7 +1146,7 @@ function renderOp() {
   <b>MIN. BET</b> — meters only charge at or above it. "8" maps to our smallest stake (BET 10), "16" to BET 20+.<br>
   <b>W-UP</b> — BIG (8–K) or SMALL (A–6). "7" is a LOSS or a TIE (push). <b>PAYOUT</b> 90% / 80% is set by Jokers shuffled into the 52-card deck (a Joker always loses): 7=LOSS uses +1 / +8 Jokers, 7=TIE +5 / +12, so a guess returns ≈90.6% / 80.0%. Disabled = wins are collected automatically.<br>
   <b>SKILL STOP</b> — ON: while the reels spin, tap a reel to stop it, STOP stops the next reel left→right, hold STOP (or keep tapping) to stop all. The result is fixed when the spin starts, so stopping never changes what lands — it only lands sooner. OFF: reels stop by themselves.<br>
-  <b>BANK B · ALL FRUITS</b> — pays instantly when all 9 symbols that land are fruit (cherry/orange/plum/melon) with all four kinds showing (≈1 in 40 spins, not during bonuses). FIXED pays ${ALLFRUIT.fixed}× your stake (skilled return ≈1.04–1.06, casual ≈0.75). POT (progressive) pays a pot that starts at ${ALLFRUIT.base}, grows +${ALLFRUIT.grow} per paid spin up to ${ALLFRUIT.max} (× bet level) — a much looser machine: skilled ≈1.31–1.33, casual ≈1.02.`;
+  <b>BANK B · ALL FRUITS</b> — pays instantly when all 9 symbols that land are fruit (cherry/orange/plum/melon) with all four kinds showing (≈1 in 40 spins, not during bonuses). FIXED pays ${ALLFRUIT.fixed}× your stake (skilled return ≈1.04–1.06, casual ≈0.75). POT (progressive) pays a pot that starts at ${ALLFRUIT.base}, grows +${ALLFRUIT.grow} per paid spin up to ${ALLFRUIT.max} (× bet level) — tuned to match FIXED: skilled ≈1.06–1.08, casual ≈0.77.`;
 }
 // ---------- HUD ----------
 const ICON = {
@@ -1294,7 +1294,7 @@ document.querySelectorAll('.tbm').forEach(el => { const c = el.querySelector('ca
 layout(); hud(); requestAnimationFrame(frame);
 // ---------- test hooks ----------
 window.__iq = {
-  marker: 'CHERRY_LINES_v3', stopReel, stopNext, stopAll, canStop, isAllFruits, afAmount, ALLFRUIT, G, save, demo, NODES, SYMBOLS, solveBoard, anyLineLeft, payOf, classOf,
+  marker: 'CHERRY_LINES_v3_1', stopReel, stopNext, stopAll, canStop, isAllFruits, afAmount, ALLFRUIT, G, save, demo, NODES, SYMBOLS, solveBoard, anyLineLeft, payOf, classOf,
   seed(n) { G.rng = mulberry(n); }, trigger(mode) { if (G.phase !== 'idle' || G.bonus) return false; G.queue.push(mode); afterRound(); return true; }, forceCard(c) { G.forcedCard = c; }, setOp(o) { Object.assign(save.op, o); persist(); hud(); }, curPayFn, cond, BONUS, CONDITIONS, force(grid) { G.forced = grid; }, fast(v) { TS = v; },
   boardClient(x, y) { return boardToScreen({ x, y }); }, pathPoints, mult, betLevel, jackpotNow,
   state() { return { phase: G.phase, credits: save.credits, win: G.win, lines: G.lines.map(L => ({ cells: L.cells, cls: L.cls, base: L.base })), burnt: [...G.burnt], grid: G.grid, canHold: G.canHold, holds: G.holds, meters: { ...save.meters }, bonus: G.bonus && { mode: G.bonus.mode, spin: G.bonus.spin, spins: G.bonus.spins, total: G.bonus.total, sticky: [...G.bonus.sticky] }, queue: G.queue.slice(), op: { ...save.op }, natural: G.natural, jp: jackpotNow(), bet: betLevel(), gam: G.gam && { amt: G.gam.amt, steps: G.gam.steps, last: G.gam.last, hist: G.gam.hist.slice(), busy: G.gam.busy } }; },
