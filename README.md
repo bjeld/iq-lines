@@ -1,7 +1,5 @@
-# IQ Lines
+# IQ Lines: Mirror Ink (twist branch)
 
-Connect the dots. Never cross. A browser puzzle game (single self-contained `index.html`, works offline).
+One stroke. Two lines. Zero crossings. Every line you draw is reflected live across a mirror; both the line and its reflection must reach their dots without crossing anything.
 
-Play: https://bjeld.github.io/iq-lines/
-
-Draw a line from each dot to its same-colored twin. Lines can't cross, touch other dots or walls, or leave the board. 20 levels, IQ 85 → 200. Relaxing procedural lo-fi music (toggle with the ♪ button).
+This branch holds the twisted game. The original IQ Lines lives on `main`; a playable preview of this version is at https://bjeld.github.io/iq-lines/twist/
