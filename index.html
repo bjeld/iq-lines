@@ -132,6 +132,78 @@ button{font-family:inherit;border:0;cursor:pointer;color:inherit}
 .popTxt{position:fixed;z-index:55;pointer-events:none;font-weight:700;font-size:22px;color:#4dff8a;-webkit-text-stroke:3px #053b18;paint-order:stroke fill;transform:translate(-50%,-50%);animation:popTxt 1.1s ease-out forwards;white-space:nowrap}
 .popTxt.red{color:#ff6b81;-webkit-text-stroke-color:#4a0010}.popTxt.gold{color:#ffe43a;-webkit-text-stroke-color:#5a1a00}
 @keyframes popTxt{0%{transform:translate(-50%,-30%) scale(.5);opacity:0}15%{transform:translate(-50%,-60%) scale(1.2);opacity:1}100%{transform:translate(-50%,-200%) scale(1);opacity:0}}
+.tb{position:relative;width:100%;max-width:640px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;padding:9px 7px 5px;border-radius:12px;background:linear-gradient(180deg,#1a0b30,#0d0618);border:2px solid #5b3a8c;box-shadow:inset 0 2px 6px rgba(0,0,0,.7)}
+.tb::before{content:'THREE BONUS';position:absolute;left:50%;top:-8px;transform:translateX(-50%);font-size:9px;font-weight:700;letter-spacing:2px;padding:1px 8px;border-radius:999px;background:#ffd23f;color:#5a2a00;white-space:nowrap}
+.tbm{display:flex;align-items:center;gap:4px;min-width:0}
+.tbm canvas{width:18px;height:18px;image-rendering:pixelated;flex:none}
+.tbbar{flex:1;height:10px;border-radius:999px;background:#140a22;border:1.5px solid #3b2a5c;overflow:hidden;position:relative;min-width:20px}
+.tbbar i{position:absolute;inset:0 auto 0 0;width:0;transition:width .4s}
+.tbm[data-k=cherry] .tbbar i{background:linear-gradient(90deg,#ff2d55,#ff8aa0);box-shadow:0 0 8px #ff2d55}
+.tbm[data-k=bell] .tbbar i{background:linear-gradient(90deg,#ffb81a,#fff3a0);box-shadow:0 0 8px #ffd23f}
+.tbm[data-k=bar] .tbbar i{background:linear-gradient(90deg,#2f7bff,#7fe3ff);box-shadow:0 0 8px #2f7bff}
+.tbm b{font-size:11px;font-weight:700;color:#e6dcff;font-variant-numeric:tabular-nums;white-space:nowrap}
+.tbm.hot b{color:#ffe43a;animation:blink .5s steps(1) infinite}
+.tbm.pop{animation:ledpop .5s cubic-bezier(.2,1.6,.4,1)}
+#tbLow{position:absolute;inset:0;border-radius:10px;display:none;align-items:center;justify-content:center;font-size:11px;font-weight:700;letter-spacing:1px;color:#ffd23f;background:rgba(10,4,20,.78);text-align:center}
+.tb.low #tbLow{display:flex}
+#tbState{position:absolute;inset:0;border-radius:10px;display:none;align-items:center;justify-content:center;gap:6px;font-size:12.5px;font-weight:700;letter-spacing:1px;white-space:nowrap}
+body.bm-cherry #tbState,body.bm-bell #tbState,body.bm-bar #tbState{display:flex}
+body.bm-cherry #tbState{background:linear-gradient(90deg,#8a0a30,#ff2d55,#8a0a30)}
+body.bm-bell #tbState{background:linear-gradient(90deg,#7a4a00,#ffc61a,#7a4a00);color:#3a2000}
+body.bm-bar #tbState{background:linear-gradient(90deg,#0a2a8a,#2f9bff,#0a2a8a)}
+body.bm-cherry .cab{background:linear-gradient(180deg,#7a0d35,#3a0518);box-shadow:0 0 0 3px #ff6b8a,0 0 0 6px #5a0020,0 0 50px rgba(255,45,85,.6),0 18px 40px rgba(0,0,0,.6)}
+body.bm-bell .cab{background:linear-gradient(180deg,#6b4a00,#2e1d00);box-shadow:0 0 0 3px #ffe066,0 0 0 6px #5a3a00,0 0 50px rgba(255,210,63,.6),0 18px 40px rgba(0,0,0,.6)}
+body.bm-bar .cab{background:linear-gradient(180deg,#0d2a7a,#050f33);box-shadow:0 0 0 3px #7fd0ff,0 0 0 6px #0a1f5c,0 0 50px rgba(60,160,255,.7),0 18px 40px rgba(0,0,0,.6)}
+body.bm-cherry .cab .bulbs i{--b1:#ff6b8a}body.bm-bell .cab .bulbs i{--b1:#fff3a0}body.bm-bar .cab .bulbs i{--b1:#7fe3ff}
+body[class*=bm-] .cab .bulbs i{animation:chase3 .5s steps(1) infinite}
+@keyframes chase3{0%{background:var(--b1,#fff);box-shadow:0 0 10px var(--b1,#fff)}50%,100%{background:#3a1a3a;box-shadow:none}}
+.cab.frenzy .bulbs i{animation:frenzy .12s steps(1) infinite!important}
+.cab.frenzy .bulbs i:nth-child(3n){animation-delay:-.04s!important}.cab.frenzy .bulbs i:nth-child(3n+1){animation-delay:-.08s!important}
+@keyframes frenzy{0%{background:#fff;box-shadow:0 0 14px #fff,0 0 4px #ff7ad9}50%,100%{background:#ff2d55;box-shadow:0 0 8px #ff2d55}}
+#flash{position:fixed;inset:0;z-index:60;pointer-events:none;background:#fff;opacity:0}
+#flash.go{animation:flash .9s ease-out}
+@keyframes flash{0%{opacity:.95}15%{opacity:.2}25%{opacity:.8}100%{opacity:0}}
+.bTitle{font-size:clamp(42px,12.5vw,80px)!important;line-height:.92}
+.bTitle.cherry{color:#ff6b8a;-webkit-text-stroke-color:#4a0018;text-shadow:0 6px 0 #4a0018,0 0 40px rgba(255,45,85,.9)}
+.bTitle.bell{color:#ffe43a}
+.bTitle.bar{color:#7fe3ff;-webkit-text-stroke-color:#06205c;text-shadow:0 6px 0 #06205c,0 0 40px rgba(60,160,255,.9)}
+#bIcon{width:96px;height:96px;image-rendering:pixelated;animation:bw .9s .15s both,wob 1.2s 1s ease-in-out infinite}
+@keyframes wob{50%{transform:rotate(8deg) scale(1.06)}}
+.bsub{font-weight:700;font-size:clamp(16px,4.6vw,21px);text-align:center;text-shadow:0 2px 4px #000}
+.rulecard{width:min(92vw,420px);border-radius:18px;padding:12px 16px;background:rgba(255,255,255,.95);color:#1a0b22;font-size:13.5px;line-height:1.38;box-shadow:0 0 0 4px #ffd23f,0 20px 50px rgba(0,0,0,.5)}
+.rulecard h4{margin:0 0 4px;font-size:15px;letter-spacing:1px;color:#7a2b9c}
+.rulecard ol{margin:0;padding-left:20px}
+.wsub{font-weight:700;color:#4a3d70;letter-spacing:1px}
+.wbtn{display:flex;flex-direction:column;line-height:1.05;align-items:center;min-width:92px}
+.wbtn small{font-size:11px;opacity:.85}
+.wrule{margin-top:8px;font-size:11.5px;font-weight:600;color:#6b5a90}
+.pc.joker{color:#9b5cff}.pc.joker .v{font-size:22px;letter-spacing:1px}
+.whist{display:flex;gap:3px;justify-content:center;margin-top:4px;min-height:24px}
+.whist span{min-width:22px;height:24px;border-radius:4px;border:1.5px solid #1a0b22;background:#fff;font-size:12px;font-weight:700;display:grid;place-items:center}
+.whist span.r{color:#e8203a}.whist span.j{color:#9b5cff}
+/* service menu */
+#opOv{background:rgba(0,0,0,.92)}
+.svc{width:min(94vw,520px);max-height:94vh;overflow:auto;font-family:'Courier New',ui-monospace,monospace;color:#7dff8a;background:#020a04;border:3px solid #1d5a26;border-radius:8px;padding:14px 14px 12px;box-shadow:0 0 30px rgba(60,255,100,.2),inset 0 0 40px rgba(60,255,100,.08);text-shadow:0 0 6px rgba(80,255,120,.6);font-size:13.5px;position:relative}
+.svc::after{content:'';position:absolute;inset:0;pointer-events:none;background:repeating-linear-gradient(180deg,rgba(0,0,0,.25) 0 1px,transparent 1px 3px)}
+.svc h2{margin:0;font-size:17px;text-align:center;color:#fff;letter-spacing:2px}
+.svc .sub{text-align:center;color:#3fbf55;font-size:12px;margin-bottom:10px}
+.dipbank{display:flex;gap:5px;justify-content:center;padding:10px 12px 6px;margin:0 auto 10px;width:max-content;background:#b3121f;border-radius:4px;box-shadow:inset 0 -3px 0 #6b0a12,0 3px 0 #000;text-shadow:none}
+.dipsw{display:flex;flex-direction:column;align-items:center;gap:3px;font-size:10px;color:#fff;font-weight:700}
+.dipsw i{width:16px;height:30px;background:#2a0a0a;border-radius:2px;position:relative;display:block}
+.dipsw i::after{content:'';position:absolute;left:2px;right:2px;height:12px;border-radius:1px;background:#f4f4f4;box-shadow:0 2px 0 #999;bottom:3px;transition:bottom .15s}
+.dipsw.on i::after{bottom:15px}
+.dipbank .lbl{font-size:9px;color:#fff;align-self:flex-start;margin-right:4px;line-height:1.1}
+.svrow{display:flex;justify-content:space-between;gap:8px;padding:6px 6px;border-radius:3px;cursor:pointer;color:#7dff8a;background:none;width:100%;text-align:left;font:inherit}
+.svrow:hover,.svrow:focus{background:rgba(80,255,120,.12);outline:none}
+.svrow .k{white-space:nowrap;overflow:hidden}
+.svrow .v{color:#fff;white-space:nowrap}
+.svrow .v::before{content:'▸ ';color:#3fbf55}
+.svrow.dis{opacity:.4;cursor:default}
+.svnote{color:#3fbf55;font-size:11.5px;line-height:1.4;margin-top:10px;border-top:1px dashed #1d5a26;padding-top:8px}
+.svnote b{color:#b6ffbe;font-weight:700}
+.svbtns{display:flex;gap:10px;justify-content:center;margin-top:12px}
+.svbtn{font:inherit;font-weight:700;color:#020a04;background:#7dff8a;border-radius:3px;padding:7px 16px;box-shadow:0 3px 0 #1d5a26}
+.svbtn.alt{background:#1d5a26;color:#b6ffbe}
 @media (max-height:720px){.spin{width:84px;height:84px;font-size:19px}.led b{font-size:18px}#game{gap:4px}}
 </style>
 </head>
@@ -148,6 +220,7 @@ button{font-family:inherit;border:0;cursor:pointer;color:inherit}
     <button class="btn glass" id="muteBtn2"></button>
     <button class="btn glass" id="crtBtn2">CRT</button>
   </div>
+  <button class="btn glass" id="svcBtn" style="font-size:12px;padding:6px 14px;opacity:.85">⚙ SERVICE / DIP SWITCHES</button>
   <div class="credline" id="credLine"></div>
 </section>
 <section id="game" class="screen">
@@ -157,7 +230,7 @@ button{font-family:inherit;border:0;cursor:pointer;color:inherit}
     <div class="rgrp"><button class="icon" id="musicBtn" aria-label="Music"></button><button class="icon" id="muteBtn" aria-label="Sound"></button></div>
   </div>
   <div class="leds"><div class="led"><small>CREDITS</small><b id="cred">0</b></div><div class="led jp"><small>IQ JACKPOT</small><b id="jp">0</b></div><div class="led win"><small>WIN</small><b id="win">0</b></div></div>
-  <div class="meter"><canvas id="meterCherry" width="16" height="16"></canvas><div class="mbar"><i id="mfill"></i><span id="mtxt">CHERRY BONUS</span></div></div>
+  <div class="tb" id="tb"><div class="tbm" data-k="cherry"><canvas width="16" height="16"></canvas><div class="tbbar"><i></i></div><b>0/12</b></div><div class="tbm" data-k="bell"><canvas width="16" height="16"></canvas><div class="tbbar"><i></i></div><b>0/7</b></div><div class="tbm" data-k="bar"><canvas width="16" height="16"></canvas><div class="tbbar"><i></i></div><b>0/1</b></div><div id="tbLow"></div><div id="tbState"></div></div>
   <div class="cab" id="cab"><div class="bulbs"></div><div class="tabs" id="tabs"></div><div id="boardWrap"><canvas id="board"></canvas></div></div>
   <div class="holds" id="holds"><button class="hold" data-c="0">HOLD</button><button class="hold" data-c="1">HOLD</button><button class="hold" data-c="2">HOLD</button></div>
   <div id="msg"><span id="msgTxt">Press SPIN</span><i id="fuse"></i></div>
@@ -166,19 +239,27 @@ button{font-family:inherit;border:0;cursor:pointer;color:inherit}
     <div class="betbox"><small>BET</small><b id="bet">10</b></div>
     <button class="cbtn" id="betUp">+</button>
     <button class="spin" id="spinBtn">SPIN</button>
-    <div id="collectRow"><button class="cbtn green big2" id="collectBtn">COLLECT</button><button class="cbtn gold big2" id="gambleBtn">GAMBLE ×2</button></div>
+    <div id="collectRow"><button class="cbtn green big2" id="collectBtn">COLLECT</button><button class="cbtn gold big2" id="gambleBtn">W-UP ×2</button></div>
     <button class="cbtn" id="hintBtn" title="IQ hint">💡</button>
   </div>
 </section>
 <div id="bigOv" class="ov" style="background:radial-gradient(circle at 50% 50%,rgba(60,10,110,.55),rgba(8,2,20,.35) 70%)"><div class="bigwin" id="bigTitle">BIG WIN!</div><div class="bwAmt" id="bigAmt">0</div><div id="bigSub" style="font-weight:700;font-size:18px;letter-spacing:2px;text-shadow:0 2px 4px #000"></div><div class="blink" style="font-size:15px">TAP TO CONTINUE</div></div>
-<div id="bonusOv" class="ov"><div class="bigwin" style="font-size:clamp(40px,12vw,72px)">CHERRY<br>BONUS!</div><canvas id="bonusCherry" width="16" height="16" style="width:110px;height:110px;image-rendering:pixelated;animation:bw .9s .2s both"></canvas><div style="font-weight:700;font-size:20px;text-align:center">3 FREE SPINS · ALL WINS ×2</div><button class="btn primary" id="bonusGo">LET'S GO!</button></div>
+<div id="bonusOv" class="ov"><div class="bigwin bTitle" id="bTitle">BONUS</div><canvas id="bIcon" width="16" height="16"></canvas><div class="bsub" id="bSub"></div><div class="rulecard" id="bRules"></div><button class="btn primary" id="bonusGo">START!</button></div>
 <div id="gambleOv" class="ov"><div class="card">
-  <h3>DOUBLE UP</h3>
-  <div style="font-weight:600;color:#4a3d70">Will the next card be HIGHER or LOWER?</div>
-  <div class="cards"><div class="pc" id="gCur"></div><div style="font-size:30px;font-weight:700;color:#9b8cc8">→</div><div class="pc back" id="gNext"></div></div>
+  <h3>W-UP</h3>
+  <div class="wsub">DOUBLE UP · BIG or SMALL?</div>
+  <div class="cards"><div class="pc back" id="gCard"></div></div>
   <div class="gwin" id="gAmt">0</div>
-  <div class="ghist" id="gHist"></div>
-  <div class="row" style="margin-top:10px"><button class="cbtn" id="gLow">▼ LOW</button><button class="cbtn green" id="gTake">TAKE</button><button class="cbtn" id="gHigh">HIGH ▲</button></div>
+  <div class="whist" id="gHist"></div>
+  <div class="row" style="margin-top:10px"><button class="cbtn wbtn" id="gSmall">SMALL<small>A – 6</small></button><button class="cbtn green" id="gTake">TAKE</button><button class="cbtn wbtn" id="gBig">BIG<small>8 – K</small></button></div>
+  <div class="wrule" id="gRule"></div>
+</div></div>
+<div id="opOv" class="ov"><div class="svc">
+  <h2>*** SERVICE MODE ***</h2><div class="sub">IQ CHERRY LINES · OPERATOR SETTINGS · DIP SW BANK A</div>
+  <div class="dipbank" id="dip"></div>
+  <div id="svRows"></div>
+  <div class="svnote" id="svNote"></div>
+  <div class="svbtns"><button class="svbtn alt" id="svReset">RESET METERS</button><button class="svbtn" id="svExit">EXIT</button></div>
 </div></div>
 <div id="ptOv" class="ov"><div class="card" style="max-height:92vh;overflow:auto">
   <h3>PAYTABLE</h3>
@@ -188,10 +269,11 @@ button{font-family:inherit;border:0;cursor:pointer;color:inherit}
   <button class="btn primary" id="ptClose" style="margin-top:10px;font-size:20px;padding:10px 34px">OK</button>
 </div></div>
 <div id="toast"></div>
+<div id="flash"></div>
 <canvas id="fx"></canvas>
 <div id="crt"></div>
 <script>
-// ======================= IQ Cherry Lines – rules, reels, routing & solver (CHERRY_LINES_v1) =======================
+// ======================= IQ Cherry Lines – rules, reels, routing & solver (CHERRY_LINES_v2 · three bonus) =======================
 // Board: 100x100 units. 3x3 reel windows separated by gutters. Lines live on a graph:
 //   9 cell nodes, 16 lattice (gutter crossing) nodes, 24 gutter segment nodes.
 // A line visits matching cells and travels through gutters. Every node can carry ONE line:
@@ -201,29 +283,28 @@ const CELL = { m: 6, s: 24, g: 8 };
 const BAND = [[0, 6, 'L', 0], [6, 30, 'C', 0], [30, 38, 'L', 1], [38, 62, 'C', 1], [62, 70, 'L', 2], [70, 94, 'C', 2], [94, 100.01, 'L', 3]];
 const LX = [3, 34, 66, 97], CX = [18, 50, 82];
 const SYMBOLS = {
-  cherry: { name: 'Cherry', col: '#ff2d55', light: '#ff9db0', dark: '#a8002a', w: 7, pay: [1, 3, 8, 20] },
-  orange: { name: 'Orange', col: '#ff9f1a', light: '#ffd08a', dark: '#b85c00', w: 7, pay: [1, 3, 8, 20] },
-  plum: { name: 'Plum', col: '#9b5cff', light: '#d2b6ff', dark: '#5a1fb8', w: 7, pay: [1, 3, 8, 20] },
-  melon: { name: 'Melon', col: '#22c55e', light: '#8ff0b2', dark: '#0e7a35', w: 6, pay: [1, 3, 9, 22] },
-  bell: { name: 'Bell', col: '#ffc61a', light: '#fff0a0', dark: '#b07800', w: 4, pay: [1, 5, 12, 30] },
-  bar: { name: 'BAR', col: '#2f7bff', light: '#9cc3ff', dark: '#0b3fb3', w: 4, pay: [2, 8, 20, 50], bar: 1 },
-  bar2: { name: 'Double BAR', col: '#14b8d8', light: '#94f1f8', dark: '#05708c', w: 2.4, pay: [3, 12, 30, 80], bar: 1 },
-  seven: { name: 'Red 7', col: '#ff3b3b', light: '#ffb0b0', dark: '#9b0010', w: 1.5, pay: [8, 30, 80, 200] },
-  wild: { name: 'IQ Wild', col: '#ff4fb8', light: '#ffc4e6', dark: '#a0006a', w: 0.45, pay: [8, 30, 80, 200] },
+  cherry: { name: 'Cherry', col: '#ff2d55', light: '#ff9db0', dark: '#a8002a', w: 7, pay: [1, 3, 6, 15] },
+  orange: { name: 'Orange', col: '#ff9f1a', light: '#ffd08a', dark: '#b85c00', w: 7, pay: [1, 3, 6, 15] },
+  plum: { name: 'Plum', col: '#9b5cff', light: '#d2b6ff', dark: '#5a1fb8', w: 7, pay: [1, 3, 6, 15] },
+  melon: { name: 'Melon', col: '#22c55e', light: '#8ff0b2', dark: '#0e7a35', w: 6, pay: [1, 3, 7, 18] },
+  bell: { name: 'Bell', col: '#ffc61a', light: '#fff0a0', dark: '#b07800', w: 4, pay: [1, 4, 10, 25] },
+  bar: { name: 'BAR', col: '#2f7bff', light: '#9cc3ff', dark: '#0b3fb3', w: 4, pay: [2, 6, 16, 40], bar: 1 },
+  bar2: { name: 'Double BAR', col: '#14b8d8', light: '#94f1f8', dark: '#05708c', w: 2.4, pay: [2, 10, 25, 60], bar: 1 },
+  seven: { name: 'Red 7', col: '#ff3b3b', light: '#ffb0b0', dark: '#9b0010', w: 1.5, pay: [6, 25, 70, 180] },
+  wild: { name: 'IQ Wild', col: '#ff4fb8', light: '#ffc4e6', dark: '#a0006a', w: 0.45, pay: [6, 25, 70, 180] },
 };
-const ANYBAR = { name: 'Any BAR', col: '#5b7cff', light: '#b6c6ff', dark: '#2a3fb3', pay: [1, 5, 12, 30] };
+const ANYBAR = { name: 'Any BAR', col: '#5b7cff', light: '#b6c6ff', dark: '#2a3fb3', pay: [1, 2, 6, 15] };
 const SYM_IDS = Object.keys(SYMBOLS);
 const SPIN_COST = 10; // credits per spin at BET 1 (pays below are credits at BET 1)
 const BET_LEVELS = [1, 2, 3, 5, 10];
-const JP_BASE = 150, JP_GROW = 0.2; // progressive IQ Jackpot (credits at BET 1, scales with bet level)
-const BONUS_AT = 75, BONUS_SPINS = 3, BONUS_MULT = 2; // Cherry Bonus meter
+const JP_BASE = 120, JP_GROW = 0.1; // progressive IQ Jackpot (credits at BET 1, scales with bet level)
 const DRAW_TIME = 20;
 const LONE_CHERRY = 0; // cherries pay as lines; they also charge the Cherry Bonus meter
 function mulberry(seed) { return () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
 const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
-function rollSymbol(rng) { let tot = 0; for (const k of SYM_IDS) tot += SYMBOLS[k].w; let r = rng() * tot; for (const k of SYM_IDS) { r -= SYMBOLS[k].w; if (r <= 0) return k; } return 'cherry'; }
+function rollSymbol(rng, boost) { const w = k => SYMBOLS[k].w * (boost && boost[k] || 1); let tot = 0; for (const k of SYM_IDS) tot += w(k); let r = rng() * tot; for (const k of SYM_IDS) { r -= w(k); if (r <= 0) return k; } return 'cherry'; }
 // grid[r][c]; holds[c] = true keeps column c
-function spinGrid(rng, prev, holds) { const g = [[], [], []]; for (let c = 0; c < 3; c++) for (let r = 0; r < 3; r++) g[r][c] = holds && holds[c] && prev ? prev[r][c] : rollSymbol(rng); return g; }
+function spinGrid(rng, prev, holds, boost) { const g = [[], [], []]; for (let c = 0; c < 3; c++) for (let r = 0; r < 3; r++) g[r][c] = holds && holds[c] && prev ? prev[r][c] : rollSymbol(rng, boost); return g; }
 
 // ---------- graph ----------
 const NODES = [], NID = {};
@@ -274,7 +355,7 @@ function solveBoard(grid, opts = {}) {
       used[s] = 1; extend([s], [s], [sym(s)]); used[s] = 0;
     }
     function extend(cells, path, syms) {
-      if (cells.length >= 2) { const cls = classOf(syms); out.push({ cells: cells.slice(), path: path.slice(), cls, pay: payOf(cls, cells.length) }); }
+      if (cells.length >= 2) { const cls = classOf(syms); out.push({ cells: cells.slice(), path: path.slice(), cls, pay: (opts.payFn || payOf)(cls, cells.length) }); }
       if (cells.length >= 5) return;
       for (let t = 0; t < 9; t++) {
         if (used[t] || burnt.has(t) || !canJoin(syms, sym(t))) continue;
@@ -309,6 +390,55 @@ function anyLineLeft(grid, used, burnt) {
 }
 // polyline of a node path (axis-aligned "circuit trace" through anchors)
 function pathPoints(path) { return path.map(id => ({ x: NODES[id].x, y: NODES[id].y })); }
+
+// ======================= THREE BONUS (Cherry / Bell / BAR) =======================
+// Operator "three bonus conditions" a-b-c = meter thresholds: Cherry needs a, Bell needs b, BAR needs c.
+//   Cherry meter: +1 per drawn cherry line of 3+     Bell meter: +1 per drawn bell line of 3+
+//   BAR meter:    +1 per drawn BAR line worth 6+ bars (BAR = 1, Double BAR = 2, Wild = 1)
+const CONDITIONS = { '12-7-1': [12, 7, 1], '9-5-1': [9, 5, 1], '6-3-1': [6, 3, 1], '3-2-1': [3, 2, 1] };
+const MIN_BET_OPTS = { 8: 1, 16: 2 }; // "minimum bet for bonus" 8 / 16 credits -> our bet levels (BET 10 / BET 20)
+const BONUS_IDS = ['cherry', 'bell', 'bar'];
+const BONUS = {
+  cherry: { name: 'CHERRY RAIN', spins: 4, rain: 1, single: 1, lineMult: 1, boost: { cherry: 1.1 } },
+  bell: { name: 'BELL RINGER', spins: 4, mult: [1, 1, 1, 3], rings: 1, boost: { bell: 1.15 } },
+  bar: { name: 'BAR UPGRADE', spins: 3, boost: { bar: 1.3, bar2: 1.2 } },
+};
+const getS = (g, id) => g[Math.floor(id / 3)][id % 3];
+const setS = (g, id, v) => { g[Math.floor(id / 3)][id % 3] = v; };
+const ALL9 = [0, 1, 2, 3, 4, 5, 6, 7, 8];
+const orth = id => { const r = Math.floor(id / 3), c = id % 3, o = []; if (r > 0) o.push(id - 3); if (r < 2) o.push(id + 3); if (c > 0) o.push(id - 1); if (c < 2) o.push(id + 1); return o; };
+const barWeight = syms => syms.reduce((a, s) => a + (s === 'bar2' ? 2 : 1), 0);
+function meterGain(lines, grid) {
+  const g = { cherry: 0, bell: 0, bar: 0 };
+  for (const L of lines) { const syms = L.cells.map(id => getS(grid, id));
+    if (L.cls === 'cherry' && L.cells.length >= 3) g.cherry++;
+    if (L.cls === 'bell' && L.cells.length >= 3) g.bell++;
+    if ((L.cls === 'bar' || L.cls === 'bar2' || L.cls === 'anybar') && barWeight(syms) >= 6) g.bar++; }
+  return g;
+}
+function newBonus(mode, level = 1) { return { mode, spin: 0, spins: BONUS[mode].spins, sticky: new Set(), total: 0, level }; }
+// one bonus spin -> { grid: what the reels show, natural: copy for the jackpot check, events: transformations, final: board you draw on }
+function bonusSpin(rng, B) {
+  const mode = B.mode, D = BONUS[mode], g = spinGrid(rng, null, null, D.boost), stick = mode === 'cherry' ? 'cherry' : mode === 'bell' ? 'bell' : null;
+  if (stick) for (const id of B.sticky) setS(g, id, stick);
+  const natural = g.map(r => r.slice()), fin = g.map(r => r.slice()), events = [], pick = a => a[Math.floor(rng() * a.length)];
+  if (mode === 'cherry') for (let k = 0; k < D.rain; k++) { const free = ALL9.filter(id => getS(fin, id) !== 'cherry'); if (!free.length) break; const id = pick(free); events.push({ type: 'rain', cell: id, from: getS(fin, id), to: 'cherry' }); setS(fin, id, 'cherry'); }
+  if (mode === 'bell') for (const id of [...B.sticky].sort(() => rng() - .5).filter(id => orth(id).some(n => getS(fin, n) !== 'bell')).slice(0, D.rings)) { const cand = orth(id).filter(n => getS(fin, n) !== 'bell'); if (!cand.length) continue; const t = pick(cand); events.push({ type: 'ring', src: id, cell: t, from: getS(fin, t), to: 'bell' }); setS(fin, t, 'bell'); }
+  if (mode === 'bar') {
+    const bars = ALL9.filter(id => SYMBOLS[getS(natural, id)].bar);
+    for (const id of bars) { const cand = orth(id).filter(n => { const s = getS(fin, n); return !SYMBOLS[s].bar && s !== 'seven' && s !== 'wild'; }); if (!cand.length) continue; const t = pick(cand); events.push({ type: 'zap', src: id, cell: t, from: getS(fin, t), to: 'bar' }); setS(fin, t, 'bar'); }
+    for (const id of bars) { const f = getS(natural, id), to = f === 'bar' ? 'bar2' : 'seven'; events.push({ type: 'upgrade', cell: id, from: f, to }); setS(fin, id, to); }
+  }
+  return { grid: g, natural, events, final: fin };
+}
+function bonusStick(B, final) { const s = B.mode === 'cherry' ? 'cherry' : B.mode === 'bell' ? 'bell' : null; if (s) ALL9.forEach(id => { if (getS(final, id) === s) B.sticky.add(id); }); }
+function bonusMult(B) { return B.mode === 'bell' ? BONUS.bell.mult[Math.max(0, B.spin - 1)] : B.mode === 'cherry' ? BONUS.cherry.lineMult : 1; }
+function bonusPayFn(B) { if (!B) return payOf; const m = bonusMult(B), k = B.mode; return (cls, n) => payOf(cls, n) * ((k === 'bell' && cls === 'bell') || (k === 'cherry' && cls === 'cherry') ? m : 1); }
+function bonusExtra(B, lines, grid) { if (!B || B.mode !== 'cherry') return 0; const used = new Set(lines.flatMap(L => L.cells)); return ALL9.filter(id => getS(grid, id) === 'cherry' && !used.has(id)).length * BONUS.cherry.single; }
+// W-UP (double up): BIG = 8..K, SMALL = A..6. Payout setting adds Jokers (always lose) so a guess returns ~90% / 80%.
+const WUP_JOKERS = { loss: { 90: 1, 80: 8 }, tie: { 90: 5, 80: 12 } };
+function wupReturn(seven, payout) { const j = WUP_JOKERS[seven][payout]; return seven === 'loss' ? 2 * 24 / (52 + j) : 2 * 24 / (48 + j); }
+function wupDraw(rng, jokers) { const n = Math.floor(rng() * (52 + jokers)); if (n >= 52) return { v: 0, s: 4 }; return { v: 1 + (n % 13), s: Math.floor(n / 13) }; }
 
 // ======================= original pixel-art symbols (drawn in code, 16x16) =======================
 const PAL = {
@@ -370,6 +500,9 @@ const CHIP_SONGS = {
   attract: { bpm: 118, prog: [[60, 'M'], [57, 'm'], [53, 'M'], [55, 'M']], scale: [0, 2, 4, 7, 9], lead: .55, drums: 1 },
   play: { bpm: 142, prog: [[60, 'M'], [55, 'M'], [57, 'm'], [53, 'M'], [60, 'M'], [55, 'M'], [53, 'M'], [55, '7']], scale: [0, 2, 4, 5, 7, 9, 11], lead: .62, drums: 2 },
   bonus: { bpm: 168, prog: [[62, 'M'], [59, 'm'], [55, 'M'], [57, '7']], scale: [0, 2, 4, 7, 9], lead: .75, drums: 3 },
+  cherry: { bpm: 172, prog: [[64, 'M'], [61, 'm'], [57, 'M'], [59, '7']], scale: [0, 2, 4, 7, 9], lead: .8, drums: 3, sparkle: 1 },
+  bell: { bpm: 128, prog: [[67, 'M'], [64, 'm'], [60, 'M'], [62, '7']], scale: [0, 2, 4, 7, 9], lead: .5, drums: 2, chime: 1 },
+  bar: { bpm: 150, prog: [[57, 'm'], [53, 'M'], [55, 'M'], [52, 'm']], scale: [0, 2, 3, 5, 7, 10], lead: .65, drums: 3, bass16: 1 },
 };
 const CHORD = { M: [0, 4, 7], m: [0, 3, 7], '7': [0, 4, 7, 10] };
 const mtof = m => 440 * Math.pow(2, (m - 69) / 12);
@@ -408,7 +541,10 @@ function createChip(ac, dest) {
     const song = E.song, s = step % 16, bar = Math.floor(step / 16), pass = Math.floor(bar / song.prog.length);
     const [root, q] = song.prog[bar % song.prog.length], ch = CHORD[q];
     // bass: octave bounce
-    if (s % 2 === 0) E.tri(root - 24 + (s % 4 === 2 ? 12 : 0) + (s === 14 && q !== 'm' ? 7 : 0), t, six * 1.8, .28);
+    if (song.bass16) E.tri(root - 24 + (s % 2 ? 12 : 0) + (s >= 12 ? 3 : 0), t, six * .9, .26);
+    else if (s % 2 === 0) E.tri(root - 24 + (s % 4 === 2 ? 12 : 0) + (s === 14 && q !== 'm' ? 7 : 0), t, six * 1.8, .28);
+    if (song.chime && s % 4 === 0) { E.tri(root + 24 + ch[(s / 4) % ch.length], t, six * 3.5, .07); E.tri(root + 31 + ch[(s / 4) % ch.length], t + .005, six * 2.5, .03); }
+    if (song.sparkle && s % 2 === 1) voice(w12, root + 36 + ch[(s >> 1) % ch.length], t, six * .5, .02);
     // arp
     if (song.drums >= 2 || s % 2 === 0) voice(w25, root + ch[s % ch.length] + 12 * (s % 8 > 3 ? 1 : 0), t, six * .9, .045);
     // lead
@@ -440,11 +576,15 @@ const DPR = () => Math.min(window.devicePixelRatio || 1, 2.5);
 const easeBack = (t, c = 1.1) => 1 + (c + 1) * Math.pow(t - 1, 3) + c * Math.pow(t - 1, 2);
 const easeOut = t => 1 - Math.pow(1 - t, 3);
 const SAVE_KEY = 'iqlines.cherry.v1', START_CREDITS = 500;
-let save = { credits: START_CREDITS, jpBase: JP_BASE, meter: 0, betIx: 0, muted: false, music: true, crt: false, timer: true, best: 0, spins: 0, refills: 0 };
-try { const s = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null'); if (s) save = Object.assign(save, s); } catch (e) {}
+const OP_DEFAULT = { cond: '12-7-1', minBet: 8, wup: true, seven: 'loss', payout: 90 };
+let save = { credits: START_CREDITS, jpBase: JP_BASE, meters: { cherry: 0, bell: 0, bar: 0 }, betIx: 0, muted: false, music: true, crt: false, timer: true, best: 0, spins: 0, refills: 0, seen: {}, op: { ...OP_DEFAULT }, bonusCount: { cherry: 0, bell: 0, bar: 0 } };
+try { const s = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null'); if (s) { const d = save; save = Object.assign({}, d, s); save.meters = Object.assign({}, d.meters, s.meters); save.op = Object.assign({}, d.op, s.op); save.seen = Object.assign({}, s.seen); save.bonusCount = Object.assign({}, d.bonusCount, s.bonusCount); delete save.meter; if (!CONDITIONS[save.op.cond]) save.op.cond = OP_DEFAULT.cond; } } catch (e) {}
 function persist() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch (e) {} }
 const betLevel = () => BET_LEVELS[save.betIx];
 const jackpotNow = () => Math.floor(save.jpBase * betLevel());
+const cond = () => CONDITIONS[save.op.cond] || CONDITIONS['12-7-1'];
+const bonusBetOk = () => betLevel() >= MIN_BET_OPTS[save.op.minBet];
+const minBetStake = () => SPIN_COST * MIN_BET_OPTS[save.op.minBet];
 let TS = 1; // time scale (tests can speed things up)
 const wait = ms => new Promise(r => setTimeout(r, ms / TS));
 // ---------- SFX (all synthesized) ----------
@@ -492,6 +632,16 @@ const Sfx = {
   flip() { this.noise(.1, { vol: .1, freq: 2500, q: .8, to: 900 }); },
   gWin() { this.seq([79, 83, 86, 91], .07, { vol: .08 }); },
   gLose() { this.seq([67, 66, 65, 64], .13, { vol: .07, type: 'sawtooth', len: 1.1 }); },
+  meter() { this.seq([84, 88, 91, 96], .04, { vol: .06 }); },
+  rain() { this.tone(1600, .45, { type: 'triangle', vol: .08, to: 300 }); this.tone(220, .12, { type: 'square', vol: .1, at: .42, to: 110 }); this.noise(.08, { vol: .1, freq: 600, at: .42 }); },
+  ring() { [1, 2.76, 5.4].forEach((h, i) => this.tone(880 * h, 1.1 - i * .3, { type: 'sine', vol: .12 / (i + 1) })); [1, 2.76].forEach((h, i) => this.tone(660 * h, .9, { type: 'sine', vol: .06 / (i + 1), at: .18 })); },
+  zap() { this.noise(.3, { vol: .2, freq: 4000, q: 1.2, to: 500 }); this.tone(1800, .25, { type: 'sawtooth', vol: .06, to: 120 }); },
+  upgrade() { this.seq([72, 79, 84, 91, 96], .035, { vol: .07 }); this.noise(.15, { vol: .06, freq: 7000, q: 2 }); },
+  bonusJingle(m) {
+    if (m === 'cherry') { this.seq([76, 79, 83, 88, 83, 88, 91, 95, null, 100, 100], .075, { vol: .08 }); this.seq([52, 59, 64, 71], .15, { vol: .1, type: 'triangle', len: 1.4 }); for (let i = 0; i < 8; i++) this.tone(2400 - i * 150, .1, { type: 'triangle', vol: .03, at: .9 + i * .06 }); }
+    else if (m === 'bell') { [0, .28, .56, .84].forEach((t, i) => { const f = [784, 988, 1175, 1568][i]; [1, 2.76, 5.4].forEach((h, k) => this.tone(f * h, 1.4 - k * .4, { type: 'sine', vol: .12 / (k + 1), at: t })); }); this.seq([55, 62, 67, 74], .28, { vol: .1, type: 'triangle', len: 1.2 }); }
+    else { this.noise(.5, { vol: .22, freq: 3000, q: .8, to: 300 }); this.seq([57, 60, 64, 69, 72, 76, 81, 84, 88, 93], .05, { vol: .07, at: .25, type: 'sawtooth', len: 1.3 }); this.seq([33, 33, 45, 33], .14, { vol: .14, type: 'square', at: .25, len: 1 }); }
+  },
   refill() { this.seq([60, 64, 67, 72, 76, 79, 84, 88], .05, { vol: .06 }); },
 };
 // ---------- full-screen FX: confetti, sparks, coins ----------
@@ -547,12 +697,27 @@ function reelPos(R, now) { // strip position of a spinning column (0 = final sym
   if (t < R.dEnd) return R.P0 - R.V * t;
   const u = Math.min(1, (t - R.dEnd) / R.dDec); return 3 * (1 - easeBack(u, 1.4));
 }
+const THEMES = { none: { g0: '#132a5c', g1: '#0b1638', frame: '#1fc8b4', acc: '#1fc8b4' }, cherry: { g0: '#5c0f30', g1: '#2a0416', frame: '#ff8aa8', acc: '#ff2d55' }, bell: { g0: '#5a3d00', g1: '#241600', frame: '#ffe27a', acc: '#ffc61a' }, bar: { g0: '#0c2f80', g1: '#030c2c', frame: '#7fd0ff', acc: '#2f9bff' } };
+function winBg(ctx, x, y) { const g = ctx.createLinearGradient(x, y, x, y + 24); g.addColorStop(0, '#d9ccb0'); g.addColorStop(.18, '#fffaf0'); g.addColorStop(.82, '#fff6e2'); g.addColorStop(1, '#cdbd98'); ctx.fillStyle = g; rrect(ctx, x, y, 24, 24, 2.5); ctx.fill(); }
+function bolt(ctx, a, b, seed, amp) { const r = mulberry(seed), n = 7; ctx.beginPath(); ctx.moveTo(a.x, a.y); for (let i = 1; i < n; i++) { const t = i / n; ctx.lineTo(a.x + (b.x - a.x) * t + (r() - .5) * amp, a.y + (b.y - a.y) * t + (r() - .5) * amp); } ctx.lineTo(b.x, b.y); }
+function drawAnim(ctx, A, now, grid) {
+  const u = clamp((now - A.t0) / A.dur, 0, 1), T = cellXY(A.cell);
+  ctx.save();
+  if (A.type === 'rain') { const y = -14 + (T.y + 14) * (u * u); ctx.globalAlpha = .35; ctx.fillStyle = '#ff2d55'; ctx.fillRect(T.x - .6, -2, 1.2, y + 2); ctx.globalAlpha = 1; drawSprite(ctx, 'cherry', T.x, y, SYM_SIZE * (1 + .25 * (1 - u))); }
+  if (A.type === 'ring') { const S0 = cellXY(A.src); for (let k = 0; k < 3; k++) { const q = (u * 1.6 + k * .33) % 1; ctx.strokeStyle = `rgba(255,214,60,${1 - q})`; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.arc(S0.x, S0.y, 6 + q * 22, 0, 6.283); ctx.stroke(); }
+    ctx.translate(S0.x, S0.y); ctx.rotate(Math.sin(now / 45) * .35 * (1 - u)); drawSprite(ctx, 'bell', 0, 0, SYM_SIZE * 1.1); ctx.restore(); ctx.save();
+    ctx.globalAlpha = .5 * Math.sin(u * Math.PI); ctx.fillStyle = '#fff3a0'; rrect(ctx, T.x - 12, T.y - 12, 24, 24, 2.5); ctx.fill(); }
+  if (A.type === 'zap') { const S0 = cellXY(A.src); ctx.lineCap = 'round'; ctx.lineJoin = 'round'; for (const [w, c] of [[4, 'rgba(60,160,255,.5)'], [1.6, '#e8f6ff']]) { bolt(ctx, S0, T, Math.floor(now / 50), 7); ctx.strokeStyle = c; ctx.lineWidth = w; ctx.shadowColor = '#2f9bff'; ctx.shadowBlur = 8; ctx.stroke(); }
+    ctx.globalAlpha = .6 * u; ctx.fillStyle = '#9cd8ff'; rrect(ctx, T.x - 12, T.y - 12, 24, 24, 2.5); ctx.fill(); }
+  if (A.type === 'upgrade') { ctx.globalAlpha = Math.sin(u * Math.PI); ctx.fillStyle = '#fff'; rrect(ctx, T.x - 12, T.y - 12, 24, 24, 2.5); ctx.fill(); ctx.strokeStyle = '#ffe43a'; ctx.lineWidth = 1.2; for (let k = 0; k < 8; k++) { const a = k * .785 + now / 300, r0 = 8 + u * 6, r1 = r0 + 6; ctx.beginPath(); ctx.moveTo(T.x + Math.cos(a) * r0, T.y + Math.sin(a) * r0); ctx.lineTo(T.x + Math.cos(a) * r1, T.y + Math.sin(a) * r1); ctx.stroke(); } }
+  ctx.restore();
+}
 function cellXY(id) { return { x: CX[id % 3], y: CX[Math.floor(id / 3)] }; }
 function renderBoard(ctx, px, V) {
   const d = DPR(), now = V.now, s = px * d / 100;
   ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height); ctx.setTransform(s, 0, 0, s, 0, 0);
   // gutter floor
-  const gb = ctx.createLinearGradient(0, 0, 0, 100); gb.addColorStop(0, '#132a5c'); gb.addColorStop(1, '#0b1638'); ctx.fillStyle = gb; ctx.fillRect(0, 0, 100, 100);
+  const TH = THEMES[V.theme] || THEMES.none, gb = ctx.createLinearGradient(0, 0, 0, 100); gb.addColorStop(0, TH.g0); gb.addColorStop(1, TH.g1); ctx.fillStyle = gb; ctx.fillRect(0, 0, 100, 100);
   ctx.strokeStyle = 'rgba(120,180,255,.07)'; ctx.lineWidth = .4; for (let k = 2; k < 100; k += 4) { ctx.beginPath(); ctx.moveTo(k, 0); ctx.lineTo(k, 100); ctx.moveTo(0, k); ctx.lineTo(100, k); ctx.stroke(); }
   const lineOf = new Map(); (V.lines || []).forEach((L, i) => L.cells.forEach(c => lineOf.set(c, i)));
   const drawCells = V.drawing ? V.drawing.cells : [];
@@ -560,10 +725,9 @@ function renderBoard(ctx, px, V) {
   for (let id = 0; id < 9; id++) {
     const r = Math.floor(id / 3), c = id % 3, x = 6 + c * 32, y = 6 + r * 32;
     ctx.fillStyle = '#05303a'; rrect(ctx, x - 1.6, y - 1.6 + .8, 27.2, 27.2, 4); ctx.fill();
-    ctx.fillStyle = V.held && V.held[c] ? '#ffd23f' : '#1fc8b4'; rrect(ctx, x - 1.6, y - 1.6, 27.2, 27.2, 4); ctx.fill();
+    const stk = V.sticky && V.sticky.has(id); if (stk) { ctx.save(); ctx.shadowColor = TH.acc; ctx.shadowBlur = 5 + 3 * Math.sin(now / 150); } ctx.fillStyle = V.held && V.held[c] ? '#ffd23f' : stk ? TH.acc : TH.frame; rrect(ctx, x - 1.6, y - 1.6, 27.2, 27.2, 4); ctx.fill(); if (stk) ctx.restore();
     ctx.fillStyle = 'rgba(255,255,255,.45)'; ctx.fillRect(x + .5, y - 1.2, 23, .6);
-    const g = ctx.createLinearGradient(x, y, x, y + 24); g.addColorStop(0, '#d9ccb0'); g.addColorStop(.18, '#fffaf0'); g.addColorStop(.82, '#fff6e2'); g.addColorStop(1, '#cdbd98');
-    ctx.fillStyle = g; rrect(ctx, x, y, 24, 24, 2.5); ctx.fill();
+    winBg(ctx, x, y);
     const li = lineOf.get(id), inDraw = drawCells.includes(id);
     if (li !== undefined || inDraw) { const L = li !== undefined ? V.lines[li] : null, col = L ? infoOf(L.cls) : V.drawing.col, fl = L && V.flash && V.flash.has(li) ? .5 + .5 * Math.sin(now / 60) : 0;
       const rg = ctx.createRadialGradient(x + 12, y + 12, 2, x + 12, y + 12, 17); rg.addColorStop(0, col.light); rg.addColorStop(1, col.col); ctx.globalAlpha = .5 + fl * .5; ctx.fillStyle = rg; rrect(ctx, x, y, 24, 24, 2.5); ctx.fill(); ctx.globalAlpha = 1; }
@@ -590,12 +754,15 @@ function renderBoard(ctx, px, V) {
         if (blur) { drawSprite(ctx, sym, CX[c], y, SYM_SIZE, { stretch: 1.25, alpha: .45 }); drawSprite(ctx, sym, CX[c], y - 3, SYM_SIZE, { stretch: 1.25, alpha: .25 }); drawSprite(ctx, sym, CX[c], y + 3, SYM_SIZE, { stretch: 1.25, alpha: .25 }); }
         else drawSprite(ctx, sym, CX[c], y, SYM_SIZE); }
       if (blur) { ctx.fillStyle = 'rgba(255,250,235,.18)'; ctx.fillRect(6 + c * 32, 0, 24, 100); }
+      if (V.sticky) for (let r = 0; r < 3; r++) if (V.sticky.has(r * 3 + c)) { winBg(ctx, 6 + c * 32, 6 + r * 32); drawSprite(ctx, V.grid[r][c], CX[c], CX[r], SYM_SIZE); }
     } else if (V.grid) {
       for (let r = 0; r < 3; r++) { const id = r * 3 + c, sym = V.grid[r][c]; let dim = false, sc = 1;
         if (V.drawing && !drawCells.includes(id)) dim = !canJoin(V.drawing.syms, sym) || (V.used && V.used[id]) || (V.burnt && V.burnt.has(id));
         if (V.burnt && V.burnt.has(id)) dim = true;
         if (V.flash && lineOf.has(id) && V.flash.has(lineOf.get(id))) sc = 1 + .1 * Math.sin(now / 70);
         if (V.drawing && drawCells.includes(id)) sc = 1.06;
+        if (V.pop && V.pop.id === id && now - V.pop.t0 < 450) sc *= 1 + .35 * Math.sin(Math.PI * (now - V.pop.t0) / 450);
+        if (V.theme === 'bell' && sym === 'bell' && V.sticky && V.sticky.has(id)) { ctx.save(); ctx.translate(CX[c], CX[r] - 7); ctx.rotate(Math.sin(now / 160 + id) * .12); ctx.translate(-CX[c], -(CX[r] - 7)); drawSprite(ctx, sym, CX[c], CX[r], SYM_SIZE * sc, { dim }); ctx.restore(); continue; }
         drawSprite(ctx, sym, CX[c], CX[r], SYM_SIZE * sc, { dim });
         if (V.burnt && V.burnt.has(id)) { ctx.strokeStyle = '#e8203a'; ctx.lineWidth = 2.2; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(CX[c] - 6, CX[r] - 6); ctx.lineTo(CX[c] + 6, CX[r] + 6); ctx.moveTo(CX[c] + 6, CX[r] - 6); ctx.lineTo(CX[c] - 6, CX[r] + 6); ctx.stroke(); }
       }
@@ -609,14 +776,17 @@ function renderBoard(ctx, px, V) {
     if (V.anticip === c) { ctx.save(); ctx.strokeStyle = '#ffd23f'; ctx.lineWidth = 1.2; ctx.shadowColor = '#ffd23f'; ctx.shadowBlur = 6; ctx.setLineDash([3, 3]); ctx.lineDashOffset = -now / 20; rrect(ctx, 3 + c * 32, 3, 30, 94, 4); ctx.stroke(); ctx.restore(); }
     if (V.held && V.held[c]) { ctx.save(); ctx.fillStyle = '#ffd23f'; rrect(ctx, 9 + c * 32, 92.5, 18, 6, 2); ctx.fill(); ctx.fillStyle = '#5a2a00'; ctx.font = '700 4.6px Fredoka,sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('HELD', CX[c], 95.8); ctx.restore(); }
   }
+  if (V.sticky) for (const id of V.sticky) { const x = 6 + (id % 3) * 32 + 24, y = 6 + Math.floor(id / 3) * 32; ctx.fillStyle = '#1a0b22'; ctx.beginPath(); ctx.arc(x - 1, y + 1.4, 2.6, 0, 6.283); ctx.fill(); ctx.fillStyle = TH.acc; ctx.beginPath(); ctx.arc(x - 1, y + 1, 2.3, 0, 6.283); ctx.fill(); ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(x - 1.6, y + .4, .8, 0, 6.283); ctx.fill(); }
+  if (V.anim) drawAnim(ctx, V.anim, now, V.grid);
   // pen tip
   if (V.drawing && V.drawing.pen && !V.drawing.bust) { const p = V.drawing.pen; ctx.fillStyle = '#fff'; ctx.strokeStyle = '#1a0b22'; ctx.lineWidth = .8; ctx.beginPath(); ctx.arc(p.x, p.y, 2.4, 0, 6.283); ctx.fill(); ctx.stroke(); }
 }
 // ---------- game state ----------
-const G = { screen: 'title', phase: 'idle', grid: null, reels: [null, null, null], lines: [], used: new Uint8Array(NODES.length), burnt: new Set(), drawing: null, holds: [false, false, false], heldShow: null, canHold: false, win: 0, credShow: null, bonusLeft: 0, freeSpin: false, timerEnd: 0, timerSec: 0, hint: null, hintUsed: false, flash: null, anticip: -1, anticipCol: -1, forced: null, gam: null, rng: mulberry((Date.now() ^ Math.floor(Math.random() * 1e9)) | 0), vis: mulberry(4242) };
+const G = { screen: 'title', phase: 'idle', grid: null, reels: [null, null, null], lines: [], used: new Uint8Array(NODES.length), burnt: new Set(), drawing: null, holds: [false, false, false], heldShow: null, canHold: false, win: 0, credShow: null, bonus: null, queue: [], natural: null, anim: null, pop: null, pendingEv: [], pendingFinal: null, forcedCard: null, timerEnd: 0, timerSec: 0, hint: null, hintUsed: false, flash: null, anticip: -1, anticipCol: -1, forced: null, gam: null, rng: mulberry((Date.now() ^ Math.floor(Math.random() * 1e9)) | 0), vis: mulberry(4242) };
 G.grid = spinGrid(G.rng);
 const symAt = id => G.grid[Math.floor(id / 3)][id % 3];
-const mult = () => betLevel() * (G.freeSpin ? BONUS_MULT : 1);
+const mult = () => G.bonus ? G.bonus.level : betLevel();
+const curPayFn = () => bonusPayFn(G.bonus);
 const boardCv = $('board'), bctx = boardCv.getContext('2d'), demoCv = $('demo'), dctx = demoCv.getContext('2d');
 let S = 300, DS = 260;
 function boardToScreen(p, cv = boardCv) { const r = cv.getBoundingClientRect(); return { x: r.left + p.x / 100 * r.width, y: r.top + p.y / 100 * r.height }; }
@@ -638,20 +808,24 @@ function hotCount(g, cols) { let n = 0; for (const c of cols) for (let r = 0; r 
 function doSpin() {
   if (G.phase !== 'idle' || G.screen !== 'game') return;
   Sfx.unlock();
-  const free = G.bonusLeft > 0;
-  if (!free) {
+  const B = G.bonus;
+  if (!B) {
     if (save.credits < SPIN_COST) { refill(); return; }
     if (save.credits < SPIN_COST * betLevel()) { while (save.betIx > 0 && save.credits < SPIN_COST * betLevel()) save.betIx--; toast('Bet lowered to ' + SPIN_COST * betLevel()); }
     save.credits -= SPIN_COST * betLevel(); save.jpBase += JP_GROW; Sfx.coinIn();
-  } else G.bonusLeft--;
-  G.freeSpin = free; save.spins++; persist();
-  const holds = G.canHold ? G.holds.slice() : [false, false, false];
-  const prev = G.grid, next = G.forced || spinGrid(G.rng, prev, holds); G.forced = null;
-  G.grid = next; G.lines = []; G.used = new Uint8Array(NODES.length); G.burnt = new Set(); G.drawing = null; G.hint = null; G.flash = null; G.win = 0;
+  }
+  save.spins++; persist();
+  const holds = !B && G.canHold ? G.holds.slice() : [false, false, false];
+  const prev = G.grid; let next, nat, ev = [], fin = null;
+  if (B) { B.spin++; const r = bonusSpin(G.rng, B); next = r.grid; nat = r.natural; ev = r.events; fin = r.final; }
+  else { next = G.forced || spinGrid(G.rng, prev, holds); nat = next; }
+  G.forced = null;
+  G.grid = next; G.natural = nat; G.pendingEv = ev; G.pendingFinal = fin;
+  G.lines = []; G.used = new Uint8Array(NODES.length); G.burnt = new Set(); G.drawing = null; G.hint = null; G.flash = null; G.win = 0;
   G.canHold = false; G.heldShow = holds.some(x => x) ? holds : null; G.holds = [false, false, false];
   G.anticipCol = !holds[2] && hotCount(next, [0, 1]) >= 2 ? 2 : -1; G.anticip = -1;
   G.reels = makeReels(prev, next, holds, performance.now(), G.anticipCol, TS, G.vis);
-  G.phase = 'spin'; Sfx.lever(); msg(free ? 'FREE SPIN — wins ×2!' : 'Good luck!'); hud();
+  G.phase = 'spin'; Sfx.lever(); msg(B ? `${BONUS[B.mode].name} · FREE SPIN ${B.spin}/${B.spins}` : 'Good luck!'); hud();
 }
 function updateReels(now) {
   if (G.phase !== 'spin') return; let all = true;
@@ -663,14 +837,29 @@ function updateReels(now) {
   });
   if (all) afterSpin();
 }
-function afterSpin() {
-  G.phase = 'draw'; G.anticip = -1; G.heldShow = null;
-  const cherries = G.grid.flat().filter(s => s === 'cherry').length;
-  if (!G.freeSpin && cherries) { save.meter = Math.min(BONUS_AT, save.meter + cherries); persist(); const m = centerOf($('mfill').parentNode); popText(m.x, m.y, '+' + cherries + ' 🍒', 'red'); }
+async function afterSpin() {
+  G.phase = 'transform'; G.anticip = -1; G.heldShow = null; hud();
+  const B = G.bonus;
+  if (B && G.pendingEv.length) await runEvents(G.pendingEv);
+  if (B) { if (G.pendingFinal) G.grid = G.pendingFinal; bonusStick(B, G.grid); }
+  G.pendingEv = []; G.pendingFinal = null;
+  G.phase = 'draw';
   G.timerEnd = save.timer ? performance.now() + DRAW_TIME * 1000 / TS : 0; G.timerSec = DRAW_TIME; G.hintUsed = false;
-  if (!anyLineLeft(G.grid, G.used, G.burnt)) { msg('No matching pair this time…'); setTimeout(endDraw, 700 / TS); }
-  else msg('DRAW your paylines! Drag from a symbol to its twins');
+  if (!anyLineLeft(G.grid, G.used, G.burnt)) { msg(B && B.mode === 'cherry' ? 'No line — single cherries still pay!' : 'No matching pair this time…'); setTimeout(endDraw, 900 / TS); }
+  else msg(B ? (B.mode === 'cherry' ? 'Cherry lines pay — and every loose cherry pays too!' : B.mode === 'bell' ? `Draw the bells! Bell lines ×${bonusMult(B)} this spin` : 'Upgraded! Draw your BAR and 7 lines') : 'DRAW your paylines! Drag from a symbol to its twins');
   hud();
+}
+const EV_MS = { rain: 650, ring: 650, zap: 420, upgrade: 420 };
+async function runEvents(evs) {
+  const B = G.bonus; msg(B.mode === 'cherry' ? 'It\'s raining cherries!' : B.mode === 'bell' ? 'The bells are ringing…' : 'BAR POWER: zap & upgrade!');
+  await wait(200);
+  for (const e of evs) {
+    G.anim = { ...e, t0: performance.now(), dur: EV_MS[e.type] / TS }; Sfx[e.type]();
+    await wait(EV_MS[e.type]);
+    setS(G.grid, e.cell, e.to); G.pop = { id: e.cell, t0: performance.now() };
+    const sc = boardToScreen(cellXY(e.cell)); burst(sc.x, sc.y, SYMBOLS[e.to].col, 16, 4.5);
+  }
+  G.anim = null; await wait(300);
 }
 // ---------- drawing ----------
 function boardPt(e) { const r = boardCv.getBoundingClientRect(); return { x: (e.clientX - r.left) / r.width * 100, y: (e.clientY - r.top) / r.height * 100 }; }
@@ -679,7 +868,7 @@ function lineCol(syms) { const c = classOf(syms); return c ? infoOf(c) : SYMBOLS
 function liveMsg() {
   const D = G.drawing; if (!D) return; const n = D.cells.length, cls = classOf(D.syms);
   if (n < 2) msg(`Drag through the gutters to another ${cls === 'wild' ? 'symbol' : infoOf(cls).name}`);
-  else msg(`${infoOf(cls).name} ×${n}  →  ${payOf(cls, n) * mult()} credits${n < 5 ? ' · keep going!' : ''}`);
+  else msg(`${infoOf(cls).name} ×${n}  →  ${curPayFn()(cls, n) * mult()} credits${n < 5 ? ' · keep going!' : ''}`);
 }
 function fillPath(from, to, D) { // shortest hop via free gutter nodes; returns nodes after `from` up to `to`
   const inPath = new Set(D.path), prev = new Map([[from, -1]]), q = [from];
@@ -718,8 +907,8 @@ function finishLine() {
   while (D.path.length && D.path[D.path.length - 1] >= 9) D.path.pop();
   G.drawing = null;
   if (D.cells.length < 2) { checkDrawOver(); return; }
-  const cls = classOf(D.syms), base = payOf(cls, D.cells.length);
-  const L = { cells: D.cells, path: D.path, cls, base, jp: isJackpot(cls, D.cells, G.grid) }; G.lines.push(L); D.path.forEach(v => G.used[v] = 1);
+  const cls = classOf(D.syms), base = curPayFn()(cls, D.cells.length);
+  const L = { cells: D.cells, path: D.path, cls, base, jp: isJackpot(cls, D.cells, G.natural || G.grid) }; G.lines.push(L); D.path.forEach(v => G.used[v] = 1);
   G.win = G.lines.reduce((a, l) => a + l.base, 0) * mult(); ledPop('win');
   Sfx.commit(D.cells.length); const s = boardToScreen(cellXY(D.cells[D.cells.length - 1])); popText(s.x, s.y - 12, '+' + base * mult(), 'gold'); burst(s.x, s.y, infoOf(cls).col, 18, 5);
   if (L.jp) toast('3 × RED 7 — IQ JACKPOT LINE!', 2200);
@@ -747,7 +936,7 @@ boardCv.addEventListener('pointerup', upH); boardCv.addEventListener('pointercan
 async function endDraw() {
   if (G.phase !== 'draw') return; if (G.drawing && !G.drawing.bust) finishLine(); G.drawing = null;
   G.phase = 'settle'; G.hint = null; G.timerEnd = 0; $('fuse').style.width = '0'; hud();
-  const m = mult(); let total = 0, jp = 0;
+  const m = mult(), B = G.bonus; let total = 0, jp = 0;
   if (G.lines.length) {
     msg('Paying lines…'); G.flash = new Set(); G.win = 0;
     for (let i = 0; i < G.lines.length; i++) {
@@ -755,19 +944,32 @@ async function endDraw() {
       const mid = boardToScreen(cellXY(L.cells[Math.floor((L.cells.length - 1) / 2)])); popText(mid.x, mid.y, `${infoOf(L.cls).name} ×${L.cells.length}  +${p}`, 'gold'); burst(mid.x, mid.y, infoOf(L.cls).col, 22, 6); hud();
       await wait(560);
     }
-    if (G.lines.some(L => L.jp)) { jp = jackpotNow(); total += jp; save.jpBase = JP_BASE; }
-    G.win = total; hud();
   }
+  if (B && B.mode === 'cherry') {
+    const used = new Set(G.lines.flatMap(L => L.cells)), singles = ALL9.filter(id => getS(G.grid, id) === 'cherry' && !used.has(id));
+    if (singles.length) { msg('Loose cherries pay too!'); for (const id of singles) { const p = BONUS.cherry.single * m; total += p; G.win = total; const sc = boardToScreen(cellXY(id)); popText(sc.x, sc.y, '+' + p, 'red'); burst(sc.x, sc.y, '#ff2d55', 12, 4); Sfx.coin(); hud(); await wait(220); } }
+  }
+  if (G.lines.some(L => L.jp)) { jp = jackpotNow(); total += jp; save.jpBase = JP_BASE; }
+  G.win = total; hud();
+  if (!B && G.lines.length) await chargeMeters();
+  if (B) B.total += total;
   save.best = Math.max(save.best, total); persist();
-  const cost = SPIN_COST * betLevel();
+  const cost = SPIN_COST * m;
   if (jp) await bigWin('IQ JACKPOT!', total, true);
-  else if (total >= 25 * cost) await bigWin('MEGA WIN!', total);
-  else if (total >= 8 * cost) await bigWin('BIG WIN!', total);
+  else if (total >= 20 * cost) await bigWin('MEGA WIN!', total);
+  else if (total >= 6 * cost) await bigWin('BIG WIN!', total);
   else if (total > 0) { Sfx.seq([72, 76, 79, 84], .06, { vol: .07 }); confetti(.35); }
-  if (total === 0) { G.flash = null; Sfx.nowin(); G.phase = 'idle'; if (!G.freeSpin) { G.canHold = true; msg('No win — tap HOLD on up to 2 reels, then SPIN'); } else msg('No win this free spin'); hud(); afterRound(); return; }
-  if (G.freeSpin) { await collect(); return; }
-  G.phase = 'result'; msg(`WIN ${total}! COLLECT it — or GAMBLE double-or-nothing`); hud();
+  if (total === 0) { G.flash = null; Sfx.nowin(); G.phase = 'idle'; if (!B) { G.canHold = true; msg('No win — tap HOLD on up to 2 reels, then SPIN'); } else msg('No win this free spin'); hud(); afterRound(); return; }
+  if (B || !save.op.wup) { await collect(); return; }
+  G.phase = 'result'; msg(`WIN ${total}! COLLECT it — or W-UP: double-or-nothing`); hud();
 }
+async function chargeMeters() {
+  const gain = meterGain(G.lines, G.grid); if (!BONUS_IDS.some(k => gain[k])) return;
+  if (!bonusBetOk()) { toast(`Bonus meters only charge at BET ${minBetStake()}+`, 2200); return; }
+  BONUS_IDS.forEach(k => { if (!gain[k]) return; save.meters[k] += gain[k]; const el = document.querySelector(`.tbm[data-k=${k}]`); el.classList.remove('pop'); void el.offsetWidth; el.classList.add('pop'); const c = centerOf(el); popText(c.x, c.y - 6, `+${gain[k]} ${k.toUpperCase()}`, k === 'cherry' ? 'red' : 'gold'); burst(c.x, c.y, k === 'cherry' ? '#ff2d55' : k === 'bell' ? '#ffd23f' : '#2f7bff', 14, 4); });
+  Sfx.meter(); persist(); hud(); queueReady(); await wait(450);
+}
+function queueReady() { const th = cond(); BONUS_IDS.forEach((k, i) => { if (save.meters[k] >= th[i] && !G.queue.includes(k)) G.queue.push(k); }); }
 async function collect(amt = G.win) {
   G.phase = 'collect'; hud();
   const from = centerOf($('win').parentNode), to = centerOf($('cred').parentNode), start = save.credits, n = clamp(Math.ceil(amt / SPIN_COST), 4, 26);
@@ -777,18 +979,47 @@ async function collect(amt = G.win) {
   G.credShow = null; G.win = 0; G.flash = null; G.phase = 'idle'; ledPop('cred'); msg('Collected ' + amt + '! Press SPIN'); hud(); afterRound();
 }
 function afterRound() {
-  if (G.freeSpin && G.bonusLeft === 0) { G.freeSpin = false; Music.setMood('play'); toast('Cherry Bonus over — back to the reels!'); }
-  if (G.bonusLeft === 0 && save.meter >= BONUS_AT) { startBonus(); return; }
-  if (G.bonusLeft > 0) msg(`FREE SPIN ${BONUS_SPINS - G.bonusLeft + 1}/${BONUS_SPINS} — all wins ×${BONUS_MULT}. Press SPIN`);
-  if (save.credits < SPIN_COST && G.bonusLeft === 0) setTimeout(refill, 700 / TS);
+  const B = G.bonus;
+  if (B && B.spin >= B.spins) { endBonus(); return; }
+  if (B) { msg(`${BONUS[B.mode].name} · FREE SPIN ${B.spin + 1}/${B.spins} — press SPIN`); hud(); return; }
+  queueReady();
+  if (G.queue.length && G.phase === 'idle') { startBonus(G.queue.shift()); return; }
+  if (save.credits < SPIN_COST) setTimeout(refill, 700 / TS);
   hud();
 }
-function startBonus() { save.meter -= BONUS_AT; persist(); G.bonusLeft = BONUS_SPINS; showOv('bonusOv', true); Sfx.bonus(); Music.setMood('bonus'); confetti(); $('cab').classList.add('party'); hud(); }
+const BONUS_INFO = {
+  cherry: { icon: 'cherry', sub: `${BONUS.cherry.spins} FREE SPINS · IT RAINS CHERRIES`, short: 'Cherries stick, it rains cherries, loose cherries pay!',
+    rules: [`${BONUS.cherry.spins} free spins at your bet.`, 'Every cherry that lands is <b>sticky</b> — it stays for the rest of the bonus.', `After each spin <b>${BONUS.cherry.rain} cherry rains down</b> onto the board.`, 'Draw cherry lines as usual — and every <b>loose cherry pays ' + BONUS.cherry.single + '</b> on its own.', 'The board fills up: aim for one huge cherry snake at the end.'] },
+  bell: { icon: 'bell', sub: `${BONUS.bell.spins} FREE SPINS · RING THE BELLS`, short: 'Bells stick and ring a neighbour into a bell. Bell lines pay more each spin!',
+    rules: [`${BONUS.bell.spins} free spins at your bet.`, 'Every bell is <b>sticky</b>.', 'Before you draw, a sticky bell <b>rings</b> and turns a neighbour into a bell.', `Bell lines pay <b>${BONUS.bell.mult.map(x => '×' + x).join(' → ')}</b> on spins 1–${BONUS.bell.spins}.`, 'Build one giant bell chain for the final ring!'] },
+  bar: { icon: 'bar2', sub: `${BONUS.bar.spins} FREE SPINS · BARS TRANSFORM`, short: 'BARs zap neighbours into BARs, then upgrade: BAR → Double BAR → 7!',
+    rules: [`${BONUS.bar.spins} free spins at your bet; BARs land more often.`, 'Before you draw, every BAR <b>zaps a neighbour</b> into a BAR…', '…then <b>upgrades</b>: BAR → Double BAR, Double BAR → RED 7.', 'Then draw your lines on the transformed board.', '7s made by upgrades pay as 7s (the IQ Jackpot needs 7s that landed).'] },
+};
+function startBonus(mode) {
+  const i = BONUS_IDS.indexOf(mode); save.meters[mode] = Math.max(0, save.meters[mode] - cond()[i]); save.bonusCount[mode] = (save.bonusCount[mode] || 0) + 1; persist();
+  G.bonus = newBonus(mode, betLevel()); G.canHold = false; G.holds = [false, false, false];
+  const f = $('flash'); f.classList.remove('go'); void f.offsetWidth; f.classList.add('go');
+  $('cab').classList.add('frenzy'); document.body.classList.add('bm-' + mode);
+  Sfx.bonusJingle(mode); Music.setMood(mode); Music.duck(2.6);
+  const I = BONUS_INFO[mode]; $('bTitle').textContent = BONUS[mode].name.replace(' ', '\n'); $('bTitle').style.whiteSpace = 'pre-line'; $('bTitle').className = 'bigwin bTitle ' + mode;
+  const ic = $('bIcon').getContext('2d'); ic.clearRect(0, 0, 16, 16); ic.imageSmoothingEnabled = false; drawSprite(ic, I.icon, 8, 8, 16);
+  $('bSub').textContent = I.sub;
+  const first = !save.seen[mode]; $('bRules').innerHTML = first ? `<h4>HOW ${BONUS[mode].name} WORKS</h4><ol>${I.rules.map(r => `<li>${r}</li>`).join('')}</ol>` : I.short;
+  $('bRules').style.fontSize = first ? '' : '15px'; $('bRules').style.textAlign = first ? '' : 'center';
+  $('bonusGo').textContent = first ? 'GOT IT — START!' : 'START!'; $('bonusGo').dataset.mode = mode;
+  confetti(1); showOv('bonusOv', true); hud();
+}
+async function endBonus() {
+  const B = G.bonus; G.bonus = null; G.phase = 'settle'; hud();
+  await bigWin(BONUS[B.mode].name, B.total, false, `BONUS TOTAL · ${B.spins} FREE SPINS`);
+  document.body.classList.remove('bm-' + B.mode); Music.setMood('play');
+  G.phase = 'idle'; msg(`${BONUS[B.mode].name} paid ${B.total} in total! Press SPIN`); afterRound();
+}
 function refill() { if (save.credits >= SPIN_COST) return; save.credits += START_CREDITS; save.refills++; persist(); Sfx.refill(); coinShower(30); toast('Out of credits — FREE refill +' + START_CREDITS + '! (fun credits only)', 2600); hud(); }
 let bigResolve = null;
-function bigWin(title, amt, jp = false) {
+function bigWin(title, amt, jp = false, sub = null) {
   return new Promise(res => {
-    $('bigTitle').textContent = title; $('bigTitle').className = 'bigwin' + (jp ? ' jp' : ''); $('bigAmt').textContent = '0'; $('bigSub').textContent = jp ? '3 × RED 7 ON ONE LINE' : title === 'MEGA WIN!' ? 'WHAT A ROUTE!' : 'NICE LINES!'; showOv('bigOv', true); $('cab').classList.add('party');
+    $('bigTitle').textContent = title; $('bigTitle').className = 'bigwin' + (jp ? ' jp' : ''); $('bigAmt').textContent = '0'; $('bigSub').textContent = sub || (jp ? '3 × RED 7 ON ONE LINE' : title === 'MEGA WIN!' ? 'WHAT A ROUTE!' : 'NICE LINES!'); showOv('bigOv', true); $('cab').classList.add('party');
     if (jp) Sfx.jackpot(); else Sfx.bigWin(); Music.duck(3); confetti(jp ? 2 : 1); coinShower(jp ? 90 : 45);
     const t0 = performance.now(), dur = 1400 / TS; const tick = () => { const u = Math.min(1, (performance.now() - t0) / dur); $('bigAmt').textContent = Math.round(amt * easeOut(u)); if (u < 1) requestAnimationFrame(tick); else $('bigAmt').textContent = amt; }; tick();
     let done = false; const fin = () => { if (done) return; done = true; showOv('bigOv', false); $('cab').classList.remove('party'); bigResolve = null; res(); };
@@ -796,31 +1027,62 @@ function bigWin(title, amt, jp = false) {
   });
 }
 function showOv(id, on) { $(id).classList.toggle('on', on); }
-// ---------- gamble (double up, high / low) ----------
+// ---------- W-UP double up (BIG 8–K / SMALL A–6, 7 = loss or tie, Jokers set the payout) ----------
 const RANKS = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'], SUITS = ['♠', '♥', '♦', '♣'];
-const drawCard = () => ({ v: 1 + Math.floor(G.rng() * 13), s: Math.floor(G.rng() * 4) });
-function cardEl(el, c) { el.className = 'pc ' + (c.s === 1 || c.s === 2 ? 'red' : 'blk'); void el.offsetWidth; el.classList.add('flip'); el.innerHTML = `<div class="v">${RANKS[c.v - 1]}</div><div class="s">${SUITS[c.s]}</div>`; }
-function gambleUi() { const g = G.gam; $('gAmt').textContent = g.amt ? `${g.amt}  →  ${g.amt * 2}?` : 'LOST'; $('gHist').innerHTML = g.hist.map(h => `<span>${h}</span>`).join(' ') + (g.steps ? ` · ${g.steps}/5` : ''); }
-function openGamble() {
-  if (G.phase !== 'result') return; Sfx.click(); G.phase = 'gamble';
-  G.gam = { amt: G.win, steps: 0, cur: drawCard(), hist: [], busy: false };
-  cardEl($('gCur'), G.gam.cur); $('gNext').className = 'pc back'; $('gNext').innerHTML = ''; gambleUi(); showOv('gambleOv', true); hud();
+const jokers = () => WUP_JOKERS[save.op.seven][save.op.payout];
+const cardTxt = c => c.v === 0 ? '★' : RANKS[c.v - 1];
+function cardEl(el, c) {
+  el.className = 'pc ' + (c.v === 0 ? 'joker' : c.s === 1 || c.s === 2 ? 'red' : 'blk'); void el.offsetWidth; el.classList.add('flip');
+  el.innerHTML = c.v === 0 ? '<div class="v">JOKER</div><div class="s">★</div>' : `<div class="v">${RANKS[c.v - 1]}</div><div class="s">${SUITS[c.s]}</div>`;
 }
-async function guess(high) {
+function gambleUi() {
+  const g = G.gam; $('gAmt').textContent = g.amt ? `${g.amt}  →  ${g.amt * 2}?` : 'LOST';
+  $('gHist').innerHTML = g.hist.slice(-9).map(c => `<span class="${c.v === 0 ? 'j' : c.s === 1 || c.s === 2 ? 'r' : ''}">${cardTxt(c)}</span>`).join('') + (g.steps ? `<span style="border:0;background:none;min-width:34px">${g.steps}/5</span>` : '');
+  const j = jokers(); $('gRule').textContent = `7 = ${save.op.seven.toUpperCase()} · deck 52 + ${j} JOKER${j > 1 ? 'S' : ''} (Joker always loses) · return per guess ≈ ${(wupReturn(save.op.seven, save.op.payout) * 100).toFixed(1)}%`;
+}
+function openGamble() {
+  if (G.phase !== 'result' || !save.op.wup) return; Sfx.click(); G.phase = 'gamble';
+  G.gam = { amt: G.win, steps: 0, hist: [], busy: false, last: null };
+  $('gCard').className = 'pc back'; $('gCard').innerHTML = ''; gambleUi(); showOv('gambleOv', true); hud();
+}
+async function guess(big) {
   const g = G.gam; if (!g || g.busy) return; g.busy = true; Sfx.flip();
-  const nx = drawCard(); cardEl($('gNext'), nx); await wait(520);
-  g.hist.push(RANKS[nx.v - 1]);
-  if (nx.v === g.cur.v) { toast('Same rank — push, go again'); Sfx.click(); }
-  else if ((nx.v > g.cur.v) === high) { g.amt *= 2; g.steps++; Sfx.gWin(); const c = centerOf($('gAmt')); burst(c.x, c.y, '#22c55e', 20, 5); popText(c.x, c.y - 20, 'DOUBLED!', 'gold'); }
-  else { g.amt = 0; gambleUi(); Sfx.gLose(); await wait(1200); closeGamble(false); return; }
+  const c = G.forcedCard || wupDraw(G.rng, jokers()); G.forcedCard = null;
+  cardEl($('gCard'), c); await wait(520); g.hist.push(c);
+  const res = c.v === 0 ? 'lose' : c.v === 7 ? (save.op.seven === 'tie' ? 'tie' : 'lose') : (big ? c.v >= 8 : c.v <= 6) ? 'win' : 'lose';
+  g.last = res;
+  if (res === 'tie') { toast('7 — TIE! Your win stays, go again'); Sfx.click(); }
+  else if (res === 'win') { g.amt *= 2; g.steps++; Sfx.gWin(); const cc = centerOf($('gAmt')); burst(cc.x, cc.y, '#22c55e', 20, 5); popText(cc.x, cc.y - 20, 'DOUBLED!', 'gold'); }
+  else { g.amt = 0; gambleUi(); Sfx.gLose(); toast(c.v === 0 ? 'JOKER — the house wins' : c.v === 7 ? '7 counts as a LOSS' : (big ? 'SMALL card' : 'BIG card') + ' — lost'); await wait(1300); closeGamble(false); return; }
   gambleUi(); await wait(750);
   if (g.steps >= 5) { toast('5 doubles — max! Taking the win'); await wait(500); closeGamble(true); return; }
-  g.cur = nx; cardEl($('gCur'), nx); $('gNext').className = 'pc back'; $('gNext').innerHTML = ''; g.busy = false;
+  $('gCard').className = 'pc back'; $('gCard').innerHTML = ''; g.busy = false;
 }
 function closeGamble(take) {
   showOv('gambleOv', false); const g = G.gam; G.gam = null;
   if (take && g.amt > 0) { G.win = g.amt; collect(g.amt); }
-  else { G.win = 0; G.flash = null; G.phase = 'idle'; msg('Gamble lost — SPIN again'); hud(); afterRound(); }
+  else { G.win = 0; G.flash = null; G.phase = 'idle'; msg('W-UP lost — SPIN again'); hud(); afterRound(); }
+}
+// ---------- operator / service menu (DIP switches) ----------
+const OP_ROWS = [
+  { k: 'cond', sw: '1-2', label: 'THREE BONUS CONDITION', vals: ['12-7-1', '9-5-1', '6-3-1', '3-2-1'], fmt: v => v },
+  { k: 'minBet', sw: '3', label: 'BONUS MIN. BET', vals: [8, 16], fmt: v => `${v} (BET ${SPIN_COST * MIN_BET_OPTS[v]}+)` },
+  { k: 'wup', sw: '4', label: 'DOUBLE UP (W-UP)', vals: [true, false], fmt: v => v ? 'ENABLED' : 'DISABLED' },
+  { k: 'seven', sw: '5', label: 'W-UP "7" COUNTS AS', vals: ['loss', 'tie'], fmt: v => v.toUpperCase(), dep: 'wup' },
+  { k: 'payout', sw: '6', label: 'W-UP PAYOUT', vals: [90, 80], fmt: v => v + '%', dep: 'wup' },
+  { k: 'timer', sw: '7', label: 'DRAW TIMER (20 SEC)', vals: [true, false], fmt: v => v ? 'ON' : 'OFF', root: true },
+  { k: null, sw: '8', label: 'NOT USED', vals: [0], fmt: () => '----' },
+];
+const opGet = R => R.k == null ? 0 : R.root ? save[R.k] : save.op[R.k];
+function dipBits() { const ix = R => Math.max(0, R.vals.indexOf(opGet(R))); const c = ix(OP_ROWS[0]); return [c & 1, c >> 1 & 1, ix(OP_ROWS[1]), ix(OP_ROWS[2]), ix(OP_ROWS[3]), ix(OP_ROWS[4]), ix(OP_ROWS[5]), 0]; }
+function renderOp() {
+  const bits = dipBits(); $('dip').innerHTML = '<span class="lbl">ON<br>▲</span>' + bits.map((b, i) => `<span class="dipsw ${b ? 'on' : ''}"><i></i>${i + 1}</span>`).join('');
+  $('svRows').innerHTML = OP_ROWS.map((R, i) => `<button class="svrow ${R.k == null || (R.dep && !save.op[R.dep]) ? 'dis' : ''}" data-i="${i}"><span class="k">SW ${R.sw.padEnd(3, ' ')} ${R.label}</span><span class="v">${R.fmt(opGet(R))}</span></button>`).join('');
+  $('svRows').querySelectorAll('.svrow').forEach(b => b.onclick = () => { const R = OP_ROWS[+b.dataset.i]; if (R.k == null || (R.dep && !save.op[R.dep])) return; const v = R.vals[(R.vals.indexOf(opGet(R)) + 1) % R.vals.length]; if (R.root) save[R.k] = v; else save.op[R.k] = v; persist(); Sfx.click(); renderOp(); hud(); });
+  const c = cond();
+  $('svNote').innerHTML = `<b>THREE BONUS CONDITION ${save.op.cond}</b> — our reading of the Cherry Master '91 operator setting (designed in its spirit, not an emulation): the three numbers are the meter targets. <b>CHERRY</b> fills by 1 per drawn cherry line of 3+ (needs ${c[0]}), <b>BELL</b> by 1 per drawn bell line of 3+ (needs ${c[1]}), <b>BAR</b> by 1 per drawn BAR line worth 6+ bars, Double BAR = 2 (needs ${c[2]}). Lower numbers = more frequent bonuses and a looser machine (skilled-play return ≈ 1.07 at 12-7-1, 1.11 at 9-5-1, 1.26 at 6-3-1, 1.5 at 3-2-1 — fun credits only).<br>
+  <b>MIN. BET</b> — meters only charge at or above it. "8" maps to our smallest stake (BET 10), "16" to BET 20+.<br>
+  <b>W-UP</b> — BIG (8–K) or SMALL (A–6). "7" is a LOSS or a TIE (push). <b>PAYOUT</b> 90% / 80% is set by Jokers shuffled into the 52-card deck (a Joker always loses): 7=LOSS uses +1 / +8 Jokers, 7=TIE +5 / +12, so a guess returns ≈90.6% / 80.0%. Disabled = wins are collected automatically.`;
 }
 // ---------- HUD ----------
 const ICON = {
@@ -830,18 +1092,20 @@ const ICON = {
 function hud() {
   $('cred').textContent = G.credShow != null ? G.credShow : save.credits; $('jp').textContent = jackpotNow(); $('win').textContent = G.win;
   $('bet').textContent = SPIN_COST * betLevel();
-  const bonus = G.bonusLeft > 0 || G.freeSpin;
-  $('mfill').style.width = (bonus ? 100 : save.meter / BONUS_AT * 100) + '%';
-  $('mtxt').textContent = G.bonusLeft > 0 ? `FREE SPINS LEFT: ${G.bonusLeft} · WINS ×${BONUS_MULT}` : G.freeSpin ? `CHERRY BONUS · WINS ×${BONUS_MULT}` : `CHERRY BONUS ${save.meter}/${BONUS_AT}`;
+  const th = cond(), B = G.bonus;
+  document.querySelectorAll('.tbm').forEach((el, i) => { const k = el.dataset.k, v = save.meters[k] || 0; el.querySelector('i').style.width = Math.min(1, v / th[i]) * 100 + '%'; el.querySelector('b').textContent = `${Math.min(v, th[i])}/${th[i]}`; el.classList.toggle('hot', th[i] > 1 && v >= th[i] - 1); });
+  $('tb').classList.toggle('low', !bonusBetOk() && !B); $('tbLow').textContent = `BET ${minBetStake()}+ TO CHARGE THE BONUS METERS`;
+  $('tbState').textContent = B ? `${BONUS[B.mode].name} · SPIN ${Math.max(1, B.spin)}/${B.spins} · WON ${B.total}${B.mode === 'bell' ? ' · BELLS ×' + bonusMult(B.spin ? B : { ...B, spin: 1 }) : ''}` : '';
   const ph = G.phase, sb = $('spinBtn');
   sb.style.display = ph === 'result' || ph === 'gamble' ? 'none' : ''; $('collectRow').classList.toggle('on', ph === 'result');
-  sb.classList.toggle('done', ph === 'draw'); sb.textContent = ph === 'draw' ? 'DONE' : G.bonusLeft > 0 ? 'FREE' : 'SPIN';
+  sb.classList.toggle('done', ph === 'draw'); sb.textContent = ph === 'draw' ? 'DONE' : B ? 'FREE' : 'SPIN';
   sb.disabled = !(ph === 'idle' || ph === 'draw'); sb.classList.toggle('glow', ph === 'idle');
-  const betOk = ph === 'idle' && G.bonusLeft === 0; $('betDn').disabled = !betOk || save.betIx === 0; $('betUp').disabled = !betOk || save.betIx === BET_LEVELS.length - 1;
+  const betOk = ph === 'idle' && !B; $('betDn').disabled = !betOk || save.betIx === 0; $('betUp').disabled = !betOk || save.betIx === BET_LEVELS.length - 1;
   $('betDn').style.display = $('betUp').style.display = $('hintBtn').style.display = ph === 'result' ? 'none' : '';
   document.querySelector('.betbox').style.display = ph === 'result' ? 'none' : '';
   $('hintBtn').disabled = !(ph === 'draw' && !G.hintUsed);
-  $('holds').classList.toggle('can', ph === 'idle' && G.canHold && G.bonusLeft === 0);
+  $('holds').classList.toggle('can', ph === 'idle' && G.canHold && !B);
+  $('gambleBtn').style.display = save.op.wup ? '' : 'none';
   document.querySelectorAll('.hold').forEach((b, i) => b.classList.toggle('on', G.canHold && G.holds[i]));
   document.querySelectorAll('#tabs b').forEach(b => b.textContent = betLevel());
   $('credLine').innerHTML = `Credits <b>${save.credits}</b> · Jackpot <b>${jackpotNow()}</b> · Best win <b>${save.best}</b>`;
@@ -908,30 +1172,36 @@ function buildPaytable() {
   const P = $('ptGrid'), lv = betLevel(); P.innerHTML = '<span class="h"></span><span class="h">×2</span><span class="h">×3</span><span class="h">×4</span><span class="h">×5+</span>';
   const rows = [['seven'], ['wild'], ['bar2'], ['bar'], ['anybar'], ['bell'], ['melon'], ['cherry', 'orange', 'plum']];
   for (const r of rows) { const cell = document.createElement('span'); cell.style.display = 'flex'; cell.style.gap = '2px'; (r[0] === 'anybar' ? ['bar', 'bar2'] : r).forEach(id => cell.appendChild(spriteImg(id))); P.appendChild(cell); const pay = r[0] === 'anybar' ? ANYBAR.pay : SYMBOLS[r[0]].pay; pay.forEach(v => { const s = document.createElement('span'); s.textContent = v * lv; P.appendChild(s); }); }
-  $('rules').innerHTML = `<b>How a round works:</b> pay ${SPIN_COST * lv} and SPIN. Then DRAW paylines: drag from a symbol through the gutters to matching symbols. Longer chains pay much more. <b>Lines may never touch or cross</b> — every gutter and crossing holds ONE line; touching another line BUSTS the new one. Press DONE (or let the ${DRAW_TIME}s fuse run out) to get paid, then COLLECT or GAMBLE.<br><br>
-  <b>IQ Wild</b> joins any line; wild-only lines pay as 7s. <b>Any BAR</b>: mix BAR + Double BAR. <b>IQ Jackpot</b>: one line through 3+ real RED 7s wins the pot (it grows every spin and scales with your bet). <b>Cherry Bonus</b>: every cherry landed fills the meter; at ${BONUS_AT} you get ${BONUS_SPINS} free spins with all wins ×${BONUS_MULT}. <b>HOLD</b>: after a losing spin, hold up to 2 reels. <b>Gamble</b>: guess HIGH/LOW, up to 5 doubles, same rank is a push.<br><br>
+  const c = cond();
+  $('rules').innerHTML = `<b>How a round works:</b> pay ${SPIN_COST * lv} and SPIN. Then DRAW paylines: drag from a symbol through the gutters to matching symbols. Longer chains pay much more. <b>Lines may never touch or cross</b> — every gutter and crossing holds ONE line; touching another line BUSTS the new one. Press DONE (or let the ${DRAW_TIME}s fuse run out) to get paid, then COLLECT or W-UP.<br><br>
+  <b>IQ Wild</b> joins any line; wild-only lines pay as 7s. <b>Any BAR</b>: mix BAR + Double BAR. <b>IQ Jackpot</b>: one line through 3+ RED 7s that landed wins the pot (grows every spin, scales with bet). <b>HOLD</b>: after a losing spin, hold up to 2 reels.<br><br>
+  <b>THREE BONUS</b> (condition ${save.op.cond}): <b>CHERRY RAIN</b> after ${c[0]} cherry lines of 3+ · <b>BELL RINGER</b> after ${c[1]} bell lines of 3+ · <b>BAR UPGRADE</b> after ${c[2]} BAR line worth 6+ bars (Double BAR = 2). Meters charge at BET ${minBetStake()}+.<br><br>
+  <b>W-UP</b>: BIG (8–K) or SMALL (A–6), up to 5 doubles; 7 = ${save.op.seven.toUpperCase()}; Jokers always lose. Operator settings: ⚙ SERVICE on the title screen.<br><br>
   Fun credits only — no real money, nothing to buy. Broke? You get a free refill. <button class="btn glass" id="timerBtn" style="color:#1a0b22;border-color:#9b8cc8;font-size:13px;padding:5px 12px">Draw timer: ${save.timer ? 'ON' : 'OFF'}</button>`;
   $('timerBtn').onclick = () => { save.timer = !save.timer; persist(); Sfx.click(); buildPaytable(); };
 }
 // ---------- screens & controls ----------
 function go(screen) {
   G.screen = screen; $('title').classList.toggle('on', screen === 'title'); $('game').classList.toggle('on', screen === 'game');
-  Music.setMood(screen === 'game' ? (G.bonusLeft > 0 || G.freeSpin ? 'bonus' : 'play') : 'attract'); requestAnimationFrame(layout);
+  Music.setMood(screen === 'game' ? (G.bonus ? G.bonus.mode : 'play') : 'attract'); requestAnimationFrame(layout);
 }
 $('playBtn').onclick = () => { Sfx.unlock(); Sfx.coinIn(); go('game'); if (save.credits < SPIN_COST && G.phase === 'idle') refill(); if (G.phase === 'idle') msg(G.canHold ? 'HOLD up to 2 reels, then SPIN' : 'Press SPIN — then DRAW your paylines!'); };
-$('backBtn').onclick = () => { Sfx.click(); if (G.phase === 'draw' || G.phase === 'spin' || G.phase === 'settle' || G.phase === 'collect' || G.phase === 'gamble') { toast('Finish this round first'); return; } if (G.phase === 'result') collect(); go('title'); };
+$('backBtn').onclick = () => { Sfx.click(); if (G.bonus) { toast('Finish the bonus first!'); return; } if (G.phase === 'draw' || G.phase === 'spin' || G.phase === 'settle' || G.phase === 'collect' || G.phase === 'gamble') { toast('Finish this round first'); return; } if (G.phase === 'result') collect(); go('title'); };
 $('spinBtn').onclick = () => { if (G.phase === 'draw') { Sfx.click(); endDraw(); } else doSpin(); };
 $('collectBtn').onclick = () => { if (G.phase === 'result') { Sfx.click(); collect(); } };
 $('gambleBtn').onclick = openGamble;
-$('gHigh').onclick = () => guess(true); $('gLow').onclick = () => guess(false); $('gTake').onclick = () => { if (G.gam && !G.gam.busy) { Sfx.click(); closeGamble(true); } };
+$('gBig').onclick = () => guess(true); $('gSmall').onclick = () => guess(false); $('gTake').onclick = () => { if (G.gam && !G.gam.busy) { Sfx.click(); closeGamble(true); } };
 $('betDn').onclick = () => { if (save.betIx > 0) { save.betIx--; persist(); Sfx.click(); hud(); } };
 $('betUp').onclick = () => { if (save.betIx < BET_LEVELS.length - 1) { save.betIx++; persist(); Sfx.click(); hud(); } };
-$('hintBtn').onclick = () => { if (G.phase !== 'draw' || G.hintUsed) return; const s = solveBoard(G.grid, { used: G.used, burnt: G.burnt }); if (!s.lines.length) { toast('No lines left'); return; } G.hintUsed = true; G.hint = s.lines[0]; Sfx.seq([84, 88, 91], .06, { vol: .06 }); msg(`IQ hint: ${infoOf(G.hint.cls).name} ×${G.hint.cells.length}`); setTimeout(() => { G.hint = null; }, 2600 / TS); hud(); };
+$('hintBtn').onclick = () => { if (G.phase !== 'draw' || G.hintUsed) return; const s = solveBoard(G.grid, { used: G.used, burnt: G.burnt, payFn: curPayFn() }); if (!s.lines.length) { toast('No lines left'); return; } G.hintUsed = true; G.hint = s.lines[0]; Sfx.seq([84, 88, 91], .06, { vol: .06 }); msg(`IQ hint: ${infoOf(G.hint.cls).name} ×${G.hint.cells.length}`); setTimeout(() => { G.hint = null; }, 2600 / TS); hud(); };
 document.querySelectorAll('.hold').forEach((b, i) => b.onclick = () => { if (!(G.phase === 'idle' && G.canHold)) return; if (!G.holds[i] && G.holds.filter(x => x).length >= 2) { toast('Hold at most 2 reels'); return; } G.holds[i] = !G.holds[i]; Sfx.hold(); hud(); });
 $('musicBtn').onclick = $('musicBtn2').onclick = toggleMusic; $('muteBtn').onclick = $('muteBtn2').onclick = toggleMute; $('crtBtn2').onclick = toggleCrt;
 $('ptBtn').onclick = () => { Sfx.unlock(); Sfx.click(); buildPaytable(); showOv('ptOv', true); };
 $('ptClose').onclick = () => { Sfx.click(); showOv('ptOv', false); };
-$('bonusGo').onclick = () => { Sfx.click(); showOv('bonusOv', false); $('cab').classList.remove('party'); msg(`FREE SPIN 1/${BONUS_SPINS} — all wins ×${BONUS_MULT}. Press SPIN`); hud(); };
+$('bonusGo').onclick = () => { const m = $('bonusGo').dataset.mode; Sfx.click(); showOv('bonusOv', false); $('cab').classList.remove('frenzy'); if (m) { save.seen[m] = 1; persist(); } if (G.bonus) msg(`${BONUS[G.bonus.mode].name} · FREE SPIN 1/${G.bonus.spins} — press SPIN`); hud(); };
+$('svcBtn').onclick = () => { Sfx.unlock(); Sfx.click(); renderOp(); showOv('opOv', true); };
+$('svExit').onclick = () => { Sfx.click(); showOv('opOv', false); hud(); };
+$('svReset').onclick = () => { save.meters = { cherry: 0, bell: 0, bar: 0 }; persist(); Sfx.click(); toast('Bonus meters reset'); hud(); };
 addEventListener('keydown', e => { if (G.screen !== 'game') return; if (e.code === 'Space') { e.preventDefault(); $('spinBtn').click(); } if (e.code === 'Enter' && G.phase === 'result') collect(); });
 addEventListener('resize', () => requestAnimationFrame(layout));
 document.addEventListener('visibilitychange', () => { if (document.hidden) Music.stop(.2); else if (Sfx.ctx && save.music) Music.start(); });
@@ -942,19 +1212,20 @@ function frame(now) {
   if (G.screen === 'game') {
     updateReels(now);
     if (G.phase === 'draw' && G.timerEnd) { const rem = G.timerEnd - now, tot = DRAW_TIME * 1000 / TS; $('fuse').style.width = clamp(rem / tot, 0, 1) * 100 + '%'; const sec = Math.ceil(rem * TS / 1000); if (sec !== G.timerSec) { G.timerSec = sec; if (sec <= 5 && sec > 0) Sfx.timer(); } if (rem <= 0) endDraw(); }
-    renderBoard(bctx, S, { grid: G.grid, reels: G.reels, lines: G.lines, drawing: G.drawing, used: G.used, burnt: G.burnt, held: G.phase === 'spin' ? G.heldShow : G.canHold && G.phase === 'idle' ? G.holds : null, now, hint: G.hint, flash: G.flash, anticip: G.anticip });
+    renderBoard(bctx, S, { grid: G.grid, reels: G.reels, lines: G.lines, drawing: G.drawing, used: G.used, burnt: G.burnt, held: G.phase === 'spin' ? G.heldShow : G.canHold && G.phase === 'idle' ? G.holds : null, now, hint: G.hint, flash: G.flash, anticip: G.anticip, theme: G.bonus && G.bonus.mode, sticky: G.bonus && G.bonus.sticky, anim: G.anim, pop: G.pop });
   } else demoTick(now);
   renderBg(now); renderFx();
 }
-['logoCherry', 'logoCherry2', 'meterCherry', 'bonusCherry'].forEach(id => { const c = $(id).getContext('2d'); c.imageSmoothingEnabled = false; drawSprite(c, 'cherry', 8, 8, 16); });
+['logoCherry', 'logoCherry2'].forEach(id => { const c = $(id).getContext('2d'); c.imageSmoothingEnabled = false; drawSprite(c, 'cherry', 8, 8, 16); });
+document.querySelectorAll('.tbm').forEach(el => { const c = el.querySelector('canvas').getContext('2d'); c.imageSmoothingEnabled = false; drawSprite(c, el.dataset.k === 'bar' ? 'bar' : el.dataset.k, 8, 8, 16); });
 (document.fonts && document.fonts.ready ? document.fonts.ready : Promise.resolve()).then(() => layout());
 layout(); hud(); requestAnimationFrame(frame);
 // ---------- test hooks ----------
 window.__iq = {
-  marker: 'CHERRY_LINES_v1', G, save, demo, NODES, SYMBOLS, solveBoard, anyLineLeft, payOf, classOf,
-  seed(n) { G.rng = mulberry(n); }, force(grid) { G.forced = grid; }, fast(v) { TS = v; },
+  marker: 'CHERRY_LINES_v2', G, save, demo, NODES, SYMBOLS, solveBoard, anyLineLeft, payOf, classOf,
+  seed(n) { G.rng = mulberry(n); }, trigger(mode) { if (G.phase !== 'idle' || G.bonus) return false; G.queue.push(mode); afterRound(); return true; }, forceCard(c) { G.forcedCard = c; }, setOp(o) { Object.assign(save.op, o); persist(); hud(); }, curPayFn, cond, BONUS, CONDITIONS, force(grid) { G.forced = grid; }, fast(v) { TS = v; },
   boardClient(x, y) { return boardToScreen({ x, y }); }, pathPoints, mult, betLevel, jackpotNow,
-  state() { return { phase: G.phase, credits: save.credits, win: G.win, lines: G.lines.map(L => ({ cells: L.cells, cls: L.cls, base: L.base })), burnt: [...G.burnt], grid: G.grid, canHold: G.canHold, holds: G.holds, meter: save.meter, bonusLeft: G.bonusLeft, jp: jackpotNow(), bet: betLevel(), gam: G.gam && { amt: G.gam.amt, steps: G.gam.steps, cur: G.gam.cur } }; },
+  state() { return { phase: G.phase, credits: save.credits, win: G.win, lines: G.lines.map(L => ({ cells: L.cells, cls: L.cls, base: L.base })), burnt: [...G.burnt], grid: G.grid, canHold: G.canHold, holds: G.holds, meters: { ...save.meters }, bonus: G.bonus && { mode: G.bonus.mode, spin: G.bonus.spin, spins: G.bonus.spins, total: G.bonus.total, sticky: [...G.bonus.sticky] }, queue: G.queue.slice(), op: { ...save.op }, natural: G.natural, jp: jackpotNow(), bet: betLevel(), gam: G.gam && { amt: G.gam.amt, steps: G.gam.steps, last: G.gam.last, hist: G.gam.hist.slice(), busy: G.gam.busy } }; },
   renderChipOffline,
 };
 
