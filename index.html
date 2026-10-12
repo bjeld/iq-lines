@@ -292,7 +292,7 @@ body[class*=bm-] .cab .bulbs i{animation:chase3 .5s steps(1) infinite}
 <canvas id="fx"></canvas>
 <div id="crt"></div>
 <script>
-// ======================= IQ Cherry Lines – rules, reels, routing & solver (CHERRY_LINES_v4 · Cherry Master-style bonuses + all fruits + skill stop) =======================
+// ======================= IQ Cherry Lines – rules, reels, routing & solver (CHERRY_LINES_v4_1 · Cherry Master-style bonuses + all fruits + skill stop) =======================
 // Board: 100x100 units. 3x3 reel windows separated by gutters. Lines live on a graph:
 //   9 cell nodes, 16 lattice (gutter crossing) nodes, 24 gutter segment nodes.
 // A line visits matching cells and travels through gutters. Every node can carry ONE line:
@@ -430,13 +430,13 @@ const CONDITIONS = { '12-7-1': [12, 7, 1], '9-5-1': [9, 5, 1], '6-3-1': [6, 3, 1
 const MIN_BET_OPTS = { 8: 1, 16: 2 }; // "minimum bet for bonus" 8 / 16 credits -> our bet levels (BET 10 / BET 20)
 const BONUS_IDS = ['cherry', 'bell', 'bar'];
 const BONUS = {
-  cherry: { name: 'CHERRY BONUS', spins: 1, reel: { blank: 10, seven: 1.6, wild: .35, cherry: 3, bar: 2, bar2: 1.2 } },
-  bell: { name: 'BELL BONUS', spins: 7, reel: { blank: 8, bell: 5.5, bar: 2, bar2: 1, seven: 1, wild: .25 }, single: 1 },
-  bar: { name: '1 BAR BONUS', spins: 7, reel: { blank: 8, bar: 4, bar2: 2, superbar: 1.1, seven: 1 }, single: 1 },
+  cherry: { name: 'CHERRY BONUS', spins: 1, reel: { blank: 10, seven: .6, wild: .12, cherry: 3, bar: 2, bar2: 1.2 } },
+  bell: { name: 'BELL BONUS', spins: 7, reel: { blank: 9, bell: 5, bar: 2, bar2: 1, seven: 1, wild: .25 }, single: 1 },
+  bar: { name: '1 BAR BONUS', spins: 7, reel: { blank: 10, bar: 4, bar2: 2, superbar: .6, seven: 1 }, single: 1 },
 };
 const SEVENS_PAY = [0, 0, 2, 5, 20, 50, 100, 200, 400, 1000]; // CHERRY BONUS: 7s anywhere (IQ Wild counts) -> × stake
 const BLANK_ALL = 50;  // all 9 cells blank during a bonus -> × stake
-const POOL_ADD = { seven: 5, wild: 10 }; // a 7 landing in the CENTRE cell (normal game) adds to the POOL (× bet level)
+const POOL_ADD = { seven: 4, wild: 8 }; // a 7 landing in the CENTRE cell (normal game) adds to the POOL (× bet level)
 const LINES8 = [[0, 1, 2], [3, 4, 5], [6, 7, 8], [0, 3, 6], [1, 4, 7], [2, 5, 8], [0, 4, 8], [2, 4, 6]];
 const getS = (g, id) => g[Math.floor(id / 3)][id % 3];
 const setS = (g, id, v) => { g[Math.floor(id / 3)][id % 3] = v; };
@@ -445,13 +445,19 @@ const orth = id => { const r = Math.floor(id / 3), c = id % 3, o = []; if (r > 0
 const barWeight = syms => syms.reduce((a, s) => a + (s === 'bar2' ? 2 : 1), 0);
 // a drawn line of exactly 3 cells, in order along a row / column / diagonal
 function isStraight(cells) { if (cells.length !== 3) return false; return LINES8.some(l => (l[0] === cells[0] && l[1] === cells[1] && l[2] === cells[2]) || (l[2] === cells[0] && l[1] === cells[1] && l[0] === cells[2])); }
-// meters + instant triggers from the lines drawn in a normal game
+// AUTO triggers, like the original: scanned on the landed grid of a normal spin, on the classic 8 lines
+//   3 real cherries -> CHERRY BONUS · 3 single BARs (IQ Wild may stand in, >= 1 real BAR) -> 1 BAR BONUS
+function autoTriggers(grid) { const out = [];
+  for (const l of LINES8) { const s = l.map(id => getS(grid, id));
+    if (s.every(x => x === 'cherry')) out.push({ mode: 'cherry', line: l });
+    else if (s.every(x => x === 'bar' || x === 'wild') && s.includes('bar')) out.push({ mode: 'bar', line: l }); }
+  return out; }
+// meters from the lines drawn in a normal game (straight 3-real-cherry lines already auto-triggered: they pay but don't count)
 function meterGain(lines, grid) {
-  const g = { cherry: 0, bell: 0, bar: 0, instant: [] };
+  const g = { cherry: 0, bell: 0, bar: 0 };
   for (const L of lines) { const syms = L.cells.map(id => getS(grid, id)), st = isStraight(L.cells);
-    if (L.cls === 'cherry') { if (st && syms.every(s => s === 'cherry')) g.instant.push('cherry'); else g.cherry++; } // 3 real cherries straight = instant; pairs & bendy lines count
-    if (L.cls === 'bell' && L.cells.length >= 3) g.bell++;
-    if (L.cls === 'bar' && st) g.bar++; } // 1BAR-1BAR-1BAR straight (IQ Wild may stand in)
+    if (L.cls === 'cherry' && !(st && syms.every(s => s === 'cherry'))) g.cherry++;
+    if (L.cls === 'bell' && L.cells.length >= 3) g.bell++; }
   return g;
 }
 function newBonus(mode, level = 1) { return { mode, spin: 0, spins: BONUS[mode].spins, sticky: new Set(), total: 0, level }; }
@@ -482,6 +488,7 @@ const PAL = {
   k: '#1a0b22', r: '#e8203a', R: '#9b0f26', w: '#fff3f0', g: '#3cc45a', G: '#1b7a32', b: '#7a4320',
   o: '#ff9f1a', O: '#cc5f00', p: '#8a4dff', P: '#4f1fa8', q: '#c9a6ff', s: '#2a0a14', l: '#d9ffb8', m: '#2fa84c', M: '#13602a',
   y: '#ffd23f', Y: '#c98a00', v: '#fff6c0', u: '#2f7bff', U: '#0b3fb3', t: '#14b8d8', T: '#05708c', z: '#ff4fb8', Z: '#a0006a', x: '#ffd0ea', n: '#ff6b6b',
+  e: '#1fb04a', E: '#0b6a2a', h: '#0f5a1e', j: '#4fc85a', a: '#f0354a', f: '#ffc21a',
 };
 const SPR = {
   cherry: [
@@ -514,6 +521,153 @@ function barPlate(fill, dark) { // 16x7 plate reading BAR
 }
 SPR.bar = ['................', '................', '................', '................', ...barPlate('u', 'U'), '................', '................', '................', '................', '................'];
 SPR.bar2 = [...barPlate('t', 'T'), '................', ...barPlate('t', 'T'), '................'];
+// v4.1: symbols redrawn in the style of the Dyna Cherry Master cabinet (own pixel art, authored as grids)
+Object.assign(SPR, {
+  melon: [
+    '................',
+    '................',
+    '.....kkkkk......',
+    '..kkkkjhlkkkk...',
+    '.kkhjhhjlwaakk..',
+    'kkhgghhjlwaaakk.',
+    'khghhjhhlwasaak.',
+    'khhjhhjhlwaaask.',
+    'khhjhhjhlwaasak.',
+    'khhjhhjhlwasaak.',
+    'kkjhhjhhlwaaask.',
+    '.kkhjhhjlwaakkk.',
+    '..kkkkhjlkkkk...',
+    '.....kkkkk......',
+    '................',
+    '................',
+  ],
+  plum: [
+    '................',
+    '................',
+    '................',
+    '...kkkkkkkk.....',
+    '.kkkppppppkkkkkk',
+    'kkppppqpppppkbbk',
+    'kppqqqpppppppkbk',
+    'kppqqpppppppppkk',
+    'ppppppppppppppk.',
+    'kpppppppppppPPk.',
+    'kpppppppppppPkk.',
+    'kkPPPPPPPPPPkk..',
+    '.kkkPPPPPPkkk...',
+    '...kkkkkkkk.....',
+    '................',
+    '................',
+  ],
+  orange: [
+    '........kkkkk...',
+    '......kkkgggk...',
+    '....kkkbgggGk...',
+    '..kkkffbggGkk...',
+    '.kkfffffffffkk..',
+    '.kfffvfffffffk..',
+    'kkffvvffffffokk.',
+    'kfffvffffffoook.',
+    'kfffffffffffook.',
+    'kfffffffffffook.',
+    'kffffffffffoook.',
+    'kkfffffffffookk.',
+    '.kffffffffoook..',
+    '.kkffoooooookk..',
+    '..kkkoooookkk...',
+    '....kkkkkkk.....',
+  ],
+  cherry: [
+    '.........kkkkkk.',
+    '........kkggggkk',
+    '.......kkbgggggk',
+    '.......kbbgggggg',
+    '......kkbbGGGGGk',
+    '....kkkbkbkkkkkk',
+    '...kkbbkkbbk....',
+    '...kbkkkkkbk....',
+    '.kkkbk...kbk....',
+    'kkrrrkkkkkbkkk..',
+    'krrrrrkkrrrrrk..',
+    'rrwwrrRrrwwrrkk.',
+    'rrwrrRRrrwrrRRk.',
+    'krrrRRkrrrrRRRk.',
+    'kkrRRkkkrrRRRkk.',
+    '.kkkkk.kkkRkkk..',
+  ],
+  seven: [
+    '................',
+    'kkkkkkkkkkkkkkkk',
+    'krnnnnnnnnnnnrRk',
+    'krrrrrrrrrrrrrRk',
+    'krrrrrrrrrrrrrRk',
+    'krrrrrrrrrrrrrRk',
+    'kkkkkkkkkkrrrRkk',
+    '........krrrRkk.',
+    '.......kkrrrRk..',
+    '......kkrrrRkk..',
+    '.....kkrrrRkk...',
+    '....kkrrrRkk....',
+    '....krrrRkk.....',
+    '...kkrrrRk......',
+    '...krrrRkk......',
+    '...kkkkkk.......',
+  ],
+  bell: [
+    '......kkkk......',
+    '.....kkYYkk.....',
+    '....kkyyYYkk....',
+    '...kkyyyyYYkk...',
+    '...kvvyyyyYYk...',
+    '...kvyyyyyYYk...',
+    '...kvyyyyyYYk...',
+    '...kvyyyyyyYk...',
+    '..kkvyyyyyyYkk..',
+    '..kvvyyyyyyYYk..',
+    '.kkvyyyyyyyyYkk.',
+    'kkvyyyyyyyyyyYkk',
+    'kvyyyyyyyyyyyyYk',
+    'kYYYYYYYYYYYYYYk',
+    'kkkkkkkYYkkkkkkk',
+    '......kkkk......',
+  ],
+  bar: [
+    '................',
+    '.....kkkkkk.....',
+    '....kkwwwwk.....',
+    '....kwwrrwk.....',
+    'kkkkkwrrrwkkkkkk',
+    'keyyewwrrweyyeek',
+    'keyeyewrrweyeyek',
+    'keyyeewrrweyyeek',
+    'keyeyewrrweyyeek',
+    'keyyeewrrweyeyek',
+    'kEYEEwwrrwwYEEEk',
+    'kkkkkwrrrRwkkkkk',
+    '....kwwwwwwk....',
+    '....kkkkkkkk....',
+    '................',
+    '................',
+  ],
+  bar2: [
+    '................',
+    '.....kkkkkk.....',
+    '....kkwwwwkk....',
+    '....kwwrrwwk....',
+    'kkkkkwrrrRwkkkkk',
+    'keyyewrwrRwyyeek',
+    'keyeywwwrRwyeyek',
+    'keyyewwrrwwyyeek',
+    'keyeywrrwweyyeek',
+    'keyyewrrwwwyeyek',
+    'kEYEEwrrrRwYEEEk',
+    'kkkkkwrrrRwkkkkk',
+    '....kwwwwwwk....',
+    '....kkkkkkkk....',
+    '................',
+    '................',
+  ],
+});
 // SUPER BAR (1 BAR BONUS only): red plate with gold BAR letters under a gold "SUPER" band (word drawn as text)
 SPR.superbar = ['kkkkkkkkkkkkkkkk', 'kyyyyyyyyyyyyyyk', 'kyyyyyyyyyyyyyyk', 'kyyyyyyyyyyyyyyk', 'kYYYYYYYYYYYYYYk', 'kkkkkkkkkkkkkkkk', ...barPlate('r', 'R'), '................', '................', '................'];
 SPR.blank = Array(16).fill('................');
@@ -619,7 +773,7 @@ const DPR = () => Math.min(window.devicePixelRatio || 1, 2.5);
 const easeBack = (t, c = 1.1) => 1 + (c + 1) * Math.pow(t - 1, 3) + c * Math.pow(t - 1, 2);
 const easeOut = t => 1 - Math.pow(1 - t, 3);
 const SAVE_KEY = 'iqlines.cherry.v1', START_CREDITS = 500;
-const OP_DEFAULT = { cond: '12-7-1', minBet: 8, wup: true, seven: 'loss', payout: 90, skillStop: true, af: 'fixed' };
+const OP_DEFAULT = { cond: '12-7-1', minBet: 8, wup: true, seven: 'loss', payout: 90, skillStop: true, af: 'fixed', reel: 'classic' };
 let save = { credits: START_CREDITS, jpBase: JP_BASE, meters: { cherry: 0, bell: 0, bar: 0 }, betIx: 0, muted: false, music: true, crt: false, timer: true, best: 0, spins: 0, refills: 0, seen: {}, op: { ...OP_DEFAULT }, bonusCount: { cherry: 0, bell: 0, bar: 0 }, afPot: ALLFRUIT.base, afHits: 0, pool: 0 };
 try { const s = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null'); if (s) { const d = save; save = Object.assign({}, d, s); save.meters = Object.assign({}, d.meters, s.meters); save.op = Object.assign({}, d.op, s.op); save.seen = Object.assign({}, s.seen); save.bonusCount = Object.assign({}, d.bonusCount, s.bonusCount); delete save.meter; if (!CONDITIONS[save.op.cond]) save.op.cond = OP_DEFAULT.cond; save.afPot = clamp(+save.afPot || ALLFRUIT.base, ALLFRUIT.base, ALLFRUIT.max); } } catch (e) {}
 function persist() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch (e) {} }
@@ -738,11 +892,11 @@ function partialPts(pts, f) { // first fraction f of a polyline (by length)
 }
 function reelPos(R, now) { // strip position of a spinning column (0 = final symbols in place)
   if (!R || !R.spinning) return 0;
-  if (R.qs) { const u = Math.min(1, (now - R.qs.t0) / 1000 * R.ts / R.qs.d); return R.qs.p0 * (1 - easeBack(u, 2.2)); }
+  if (R.qs) { const u = Math.min(1, (now - R.qs.t0) / 1000 * R.ts / R.qs.d); return R.qs.p0 * (1 - (R.lin ? u : easeBack(u, 2.2))); }
   const t = (now - R.t0) / 1000 * R.ts;
   if (t < 0) return R.P0;
   if (t < R.dEnd) return R.P0 - R.V * t;
-  const u = Math.min(1, (t - R.dEnd) / R.dDec); return 3 * (1 - easeBack(u, 1.4));
+  const u = Math.min(1, (t - R.dEnd) / R.dDec); return 3 * (1 - (R.lin ? u : easeBack(u, 1.4)));
 }
 const THEMES = { none: { g0: '#132a5c', g1: '#0b1638', frame: '#1fc8b4', acc: '#1fc8b4' }, cherry: { g0: '#5c0f30', g1: '#2a0416', frame: '#ff8aa8', acc: '#ff2d55', blank: '#ff9cc0' }, bell: { g0: '#5a3d00', g1: '#241600', frame: '#ffe27a', acc: '#ffc61a', blank: '#fff1b8' }, bar: { g0: '#0c2f80', g1: '#030c2c', frame: '#7fd0ff', acc: '#2f9bff', blank: '#8ec8ff' } };
 function winBg(ctx, x, y) { const g = ctx.createLinearGradient(x, y, x, y + 24); g.addColorStop(0, '#d9ccb0'); g.addColorStop(.18, '#fffaf0'); g.addColorStop(.82, '#fff6e2'); g.addColorStop(1, '#cdbd98'); ctx.fillStyle = g; rrect(ctx, x, y, 24, 24, 2.5); ctx.fill(); }
@@ -796,7 +950,7 @@ function renderBoard(ctx, px, V) {
   for (let c = 0; c < 3; c++) {
     const R = V.reels && V.reels[c], spinning = R && R.spinning; ctx.save(); ctx.beginPath(); for (let r = 0; r < 3; r++) ctx.rect(6 + c * 32, 6 + r * 32, 24, 24); ctx.clip();
     if (spinning) {
-      const pos = reelPos(R, now), pos2 = reelPos(R, now - 16), speed = Math.abs(pos2 - pos) * 60, blur = speed > 6, i0 = Math.floor(pos) - 1;
+      const pos = reelPos(R, now), pos2 = reelPos(R, now - 16), speed = Math.abs(pos2 - pos) * 60, blur = speed > 6 && !R.lin, i0 = Math.floor(pos) - 1;
       for (let i = i0; i <= i0 + 4; i++) { const sym = R.strip[i]; if (!sym) continue; const y = 18 + (i - pos) * PITCH; if (y < -16 || y > 116) continue;
         if (blur) { drawSprite(ctx, sym, CX[c], y, SYM_SIZE, { stretch: 1.25, alpha: .45 }); drawSprite(ctx, sym, CX[c], y - 3, SYM_SIZE, { stretch: 1.25, alpha: .25 }); drawSprite(ctx, sym, CX[c], y + 3, SYM_SIZE, { stretch: 1.25, alpha: .25 }); }
         else drawSprite(ctx, sym, CX[c], y, SYM_SIZE); }
@@ -825,6 +979,12 @@ function renderBoard(ctx, px, V) {
     if (V.held && V.held[c]) { ctx.save(); ctx.fillStyle = '#ffd23f'; rrect(ctx, 9 + c * 32, 92.5, 18, 6, 2); ctx.fill(); ctx.fillStyle = '#5a2a00'; ctx.font = '700 4.6px Fredoka,sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('HELD', CX[c], 95.8); ctx.restore(); }
   }
   if (V.sticky) for (const id of V.sticky) { const x = 6 + (id % 3) * 32 + 24, y = 6 + Math.floor(id / 3) * 32; ctx.fillStyle = '#1a0b22'; ctx.beginPath(); ctx.arc(x - 1, y + 1.4, 2.6, 0, 6.283); ctx.fill(); ctx.fillStyle = TH.acc; ctx.beginPath(); ctx.arc(x - 1, y + 1, 2.3, 0, 6.283); ctx.fill(); ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(x - 1.6, y + .4, .8, 0, 6.283); ctx.fill(); }
+  if (V.autoLines && !spinningAny(V.reels)) for (const A of V.autoLines) { const a = A.line[0], b = A.line[2], k = Math.min(1, (now - A.t0) / 350);
+    const x0 = CX[a % 3], y0 = CX[Math.floor(a / 3)], x1 = CX[b % 3], y1 = CX[Math.floor(b / 3)], dx = (x1 - x0) / 2 * .32, dy = (y1 - y0) / 2 * .32;
+    const sx = x0 - dx, sy = y0 - dy, ex = sx + (x1 + dx - sx) * k, ey = sy + (y1 + dy - sy) * k; ctx.save(); ctx.lineCap = 'round';
+    ctx.globalAlpha = A.ok ? .9 : .55; ctx.strokeStyle = '#4a0010'; ctx.lineWidth = 4.2; ctx.beginPath(); ctx.moveTo(sx, sy + .6); ctx.lineTo(ex, ey + .6); ctx.stroke();
+    ctx.strokeStyle = A.ok ? '#e8203a' : '#8a6a70'; ctx.shadowColor = '#ff2d55'; ctx.shadowBlur = A.ok ? 4 + 3 * Math.sin(now / 90) : 0; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(ex, ey); ctx.stroke();
+    ctx.shadowBlur = 0; ctx.strokeStyle = 'rgba(255,255,255,.7)'; ctx.lineWidth = .8; ctx.setLineDash([2.5, 3]); ctx.lineDashOffset = -now / 30; ctx.beginPath(); ctx.moveTo(sx, sy - .5); ctx.lineTo(ex, ey - .5); ctx.stroke(); ctx.restore(); }
   if (V.anim) drawAnim(ctx, V.anim, now, V.grid);
   // pen tip
   if (V.drawing && V.drawing.pen && !V.drawing.bust) { const p = V.drawing.pen; ctx.fillStyle = '#fff'; ctx.strokeStyle = '#1a0b22'; ctx.lineWidth = .8; ctx.beginPath(); ctx.arc(p.x, p.y, 2.4, 0, 6.283); ctx.fill(); ctx.stroke(); }
@@ -841,17 +1001,21 @@ function boardToScreen(p, cv = boardCv) { const r = cv.getBoundingClientRect(); 
 function msg(t) { $('msgTxt').textContent = t; }
 function ledPop(id) { const el = $(id).parentNode; el.classList.remove('pop'); void el.offsetWidth; el.classList.add('pop'); }
 function makeReels(prev, next, holds, now, anticipCol, ts, rng, fill) {
-  const stops = [.7, 1.05, 1.4], reels = [];
+  // CLASSIC (measured from Cherry Master '91 video): all reels start and stop together after ~1.05 s; a very fast
+  // phase (~60 symbols/s, crisp, no blur) then ~0.25 s at ~12 symbols/s and a dead stop (no ease, no bounce).
+  // MODERN: staggered stops .7/1.05/1.4 s, 25 symbols/s, eased landing with a small bounce, 7s anticipation.
+  const classic = save.op.reel === 'classic', stops = classic ? [1.05, 1.05, 1.05] : [.7, 1.05, 1.4], reels = [];
   for (let c = 0; c < 3; c++) {
     if (holds[c]) { reels.push(null); continue; }
-    const tStop = stops[c] + (c === anticipCol ? 1.45 : 0), dDec = .42, dEnd = tStop - dDec, P0 = Math.round(3 + 25 * dEnd), V = (P0 - 3) / dEnd, strip = [];
+    const tStop = stops[c] + (!classic && c === anticipCol ? 1.45 : 0), dDec = classic ? .25 : .42, dEnd = tStop - dDec, P0 = Math.round(3 + (classic ? 60 : 25) * dEnd), V = (P0 - 3) / dEnd, strip = [];
     for (let r = 0; r < 3; r++) strip[r] = next[r][c];
     for (let i = 3; i < P0; i++) strip[i] = fill ? fill() : rollSymbol(rng);
     for (let r = 0; r < 3; r++) strip[P0 + r] = prev[r][c];
-    reels.push({ spinning: true, t0: now, P0, V, dEnd, dDec, ts, strip, lastI: P0, tStop });
+    reels.push({ spinning: true, t0: now, P0, V, dEnd, dDec, ts, strip, lastI: P0, tStop, lin: classic });
   }
   return reels;
 }
+const spinningAny = R => !!(R && R.some(x => x && x.spinning));
 function hotCount(g, cols) { let n = 0; for (const c of cols) for (let r = 0; r < 3; r++) if (g[r][c] === 'seven' || g[r][c] === 'wild') n++; return n; }
 function doSpin() {
   if (G.phase !== 'idle' || G.screen !== 'game') return;
@@ -872,9 +1036,9 @@ function doSpin() {
   G.grid = next; G.natural = nat; G.pendingEv = ev; G.pendingFinal = fin;
   G.lines = []; G.used = new Uint8Array(NODES.length); G.burnt = new Set(); G.drawing = null; G.hint = null; G.flash = null; G.win = 0;
   G.canHold = false; G.heldShow = holds.some(x => x) ? holds : null; G.holds = [false, false, false];
-  G.anticipCol = !holds[2] && hotCount(next, [0, 1]) >= 2 ? 2 : -1; G.anticip = -1;
+  G.anticipCol = save.op.reel !== 'classic' && !holds[2] && hotCount(next, [0, 1]) >= 2 ? 2 : -1; G.anticip = -1;
   G.reels = makeReels(prev, next, holds, performance.now(), G.anticipCol, TS, G.vis, B ? () => rollFrom(G.vis, BONUS[B.mode].reel) : null);
-  G.spinT0 = performance.now(); G.stopLog = []; G.af = null; G.planned = next.map(r => r.slice()); G.phase = 'spin'; Sfx.lever(); msg(B ? `${BONUS[B.mode].name} · FREE SPIN ${B.spin}/${B.spins}` : 'Good luck!'); hud();
+  G.spinT0 = performance.now(); G.autoLines = null; G.stopLog = []; G.af = null; G.planned = next.map(r => r.slice()); G.phase = 'spin'; Sfx.lever(); msg(B ? `${BONUS[B.mode].name} · FREE SPIN ${B.spin}/${B.spins}` : 'Good luck!'); hud();
 }
 // ---------- tap-to-stop (the result is fixed when the spin starts; stopping only lands the planned symbols sooner) ----------
 function stopReel(c) {
@@ -902,6 +1066,7 @@ async function afterSpin() {
   const B = G.bonus;
   if (!B && isAllFruits(G.natural)) await allFruits();
   if (!B && poolGain(G.natural)) poolAdd(poolGain(G.natural) * betLevel());
+  if (!B) await autoBonus();
   if (B && G.pendingEv.length) await runEvents(G.pendingEv);
   if (B) { if (G.pendingFinal) G.grid = G.pendingFinal; bonusStick(B, G.grid); }
   G.pendingEv = []; G.pendingFinal = null;
@@ -912,6 +1077,18 @@ async function afterSpin() {
   hud();
 }
 function poolAdd(n) { save.pool = (save.pool || 0) + n; persist(); const el = $('poolTag'); el.classList.remove('hit'); void el.offsetWidth; el.classList.add('hit'); const c = boardToScreen(cellXY(4)); popText(c.x, c.y - 10, `CENTRE 7 · POOL +${n}`, 'gold'); Sfx.meter(); hud(); }
+async function autoBonus() { // classic straight-line triggers on the landed grid
+  const T = autoTriggers(G.natural); if (!T.length) return; const ok = bonusBetOk();
+  G.autoLines = T.map(t => ({ ...t, t0: performance.now(), ok }));
+  for (const t of T) { const mid = boardToScreen(cellXY(t.line[1]));
+    if (ok) { G.queue.push(t.mode + '*'); popText(mid.x, mid.y, t.mode === 'cherry' ? 'CHERRY BONUS!' : '1 BAR BONUS!', 'red'); burst(mid.x, mid.y, t.mode === 'cherry' ? '#ff2d55' : '#2f7bff', 30, 7); }
+    else popText(mid.x, mid.y, `BET ${minBetStake()}+ FOR BONUS`, 'red'); }
+  if (ok) { Sfx.bonusJingle(T[0].mode); const f = $('flash'); f.classList.remove('go'); void f.offsetWidth; f.classList.add('go');
+    toast(T.map(t => t.mode === 'cherry' ? 'CHERRY BONUS! 3 CHERRIES ON A LINE' : '1 BAR BONUS! 3 BARS ON A LINE').join(' + '), 3200);
+    msg(T.length > 1 ? 'TWO BONUSES queued! Draw your lines first' : 'BONUS queued! Draw your lines first'); }
+  else { Sfx.block(); toast(`BET ${minBetStake()}+ FOR BONUS`, 2400); }
+  await wait(1300);
+}
 async function poolTake() {
   const amt = save.pool || 0; if (!amt) return; save.pool = 0; G.bonus.total += amt;
   const start = save.credits; save.credits += amt; save.best = Math.max(save.best, amt); persist(); G.credShow = start; msg(`BELL BONUS takes the POOL: +${amt}!`);
@@ -1052,9 +1229,8 @@ async function endDraw() {
   G.phase = 'result'; msg(`WIN ${total}! COLLECT it — or W-UP: double-or-nothing`); hud();
 }
 async function chargeMeters() {
-  const gain = meterGain(G.lines, G.grid); if (!BONUS_IDS.some(k => gain[k]) && !gain.instant.length) return;
-  if (!bonusBetOk()) { toast(`Bonuses only trigger at BET ${minBetStake()}+`, 2200); return; }
-  for (const k of gain.instant) { G.queue.push(k + '*'); toast('3 CHERRIES ON A STRAIGHT LINE — CHERRY BONUS!', 2400); Sfx.tease(); }
+  const gain = meterGain(G.lines, G.grid); if (!BONUS_IDS.some(k => gain[k])) return;
+  if (!bonusBetOk()) { toast(`Bonus meters only charge at BET ${minBetStake()}+`, 2200); return; }
   BONUS_IDS.forEach(k => { if (!gain[k]) return; save.meters[k] += gain[k]; const el = document.querySelector(`.tbm[data-k=${k}]`); el.classList.remove('pop'); void el.offsetWidth; el.classList.add('pop'); const c = centerOf(el); popText(c.x, c.y - 6, `+${gain[k]} ${k.toUpperCase()}`, k === 'cherry' ? 'red' : 'gold'); burst(c.x, c.y, k === 'cherry' ? '#ff2d55' : k === 'bell' ? '#ffd23f' : '#2f7bff', 14, 4); });
   Sfx.meter(); persist(); hud(); queueReady(); await wait(450);
 }
@@ -1078,11 +1254,11 @@ function afterRound() {
 }
 const BONUS_INFO = {
   cherry: { icon: 'cherry', sub: 'ONE SPIN ON THE 7s REELS · COUNT THE 7s', short: 'One spin on pink reels packed with 7s — every 7 on screen counts!',
-    rules: ['Triggered by <b>3 cherries on a straight line</b> (row, column or diagonal, drawn as a 3-cell line) — or when the cherry meter is full.', '<b>One spin</b> on special pink reels: blanks, RED 7s, BARs and cherries.', `7s pay <b>anywhere</b>: ${SEVENS_PAY.map((v, i) => v ? `${i}×7 = ${v}×` : '').filter(Boolean).join(' · ')} your stake (IQ Wild counts as a 7).`, 'Then draw any lines as usual. All 9 blank pays ' + BLANK_ALL + '× stake.'] },
+    rules: ['Starts <b>automatically</b> when 3 cherries land on a row, column or diagonal — or when the cherry meter is full.', '<b>One spin</b> on special pink reels: blanks, RED 7s, BARs and cherries.', `7s pay <b>anywhere</b>: ${SEVENS_PAY.map((v, i) => v ? `${i}×7 = ${v}×` : '').filter(Boolean).join(' · ')} your stake (IQ Wild counts as a 7).`, 'Then draw any lines as usual. All 9 blank pays ' + BLANK_ALL + '× stake.'] },
   bell: { icon: 'bell', sub: `TAKE THE POOL + ${BONUS.bell.spins} FREE GAMES`, short: 'You take the POOL, then every bell pays on its own!',
     rules: [`Starts by paying you the <b>POOL</b> — it grows every time a RED 7 lands in the centre cell (+${POOL_ADD.seven}, IQ Wild +${POOL_ADD.wild}, × bet level).`, `Then <b>${BONUS.bell.spins} free games</b> on special reels with blanks, bells, BARs and 7s.`, `Every bell on screen pays <b>${BONUS.bell.single}</b> (× bet level) — and bell lines pay as usual.`, 'All 9 blank pays ' + BLANK_ALL + '× stake.'] },
   bar: { icon: 'superbar', sub: `${BONUS.bar.spins} FREE GAMES · SUPER BARs`, short: 'SUPER BARs pay double the Double BAR!',
-    rules: ['Triggered by <b>3 single BARs on a straight line</b> (row, column or diagonal, drawn as a 3-cell line).', `<b>${BONUS.bar.spins} free games</b> on special reels with blanks, BARs and <b>SUPER BARs</b>.`, `SUPER BAR lines pay ${SYMBOLS.superbar.pay.join(' / ')} (×2–×5) and mix with other BARs; each SUPER BAR on screen also pays ${BONUS.bar.single}.`, 'All 9 blank pays ' + BLANK_ALL + '× stake.'] },
+    rules: ['Starts <b>automatically</b> when 3 single BARs land on a row, column or diagonal (IQ Wild may stand in).', `<b>${BONUS.bar.spins} free games</b> on special reels with blanks, BARs and <b>SUPER BARs</b>.`, `SUPER BAR lines pay ${SYMBOLS.superbar.pay.join(' / ')} (×2–×5) and mix with other BARs; each SUPER BAR on screen also pays ${BONUS.bar.single}.`, 'All 9 blank pays ' + BLANK_ALL + '× stake.'] },
 };
 function startBonus(mode) {
   const inst = mode.endsWith('*'); mode = mode.replace('*', ''); const i = BONUS_IDS.indexOf(mode); if (!inst) save.meters[mode] = Math.max(0, save.meters[mode] - cond()[i]); save.bonusCount[mode] = (save.bonusCount[mode] || 0) + 1; persist();
@@ -1162,22 +1338,23 @@ const OP_ROWS = [
   { k: 'timer', sw: '7', label: 'DRAW TIMER (20 SEC)', vals: [true, false], fmt: v => v ? 'ON' : 'OFF', root: true },
   { k: 'skillStop', sw: '8', label: 'SKILL STOP (TAP TO STOP)', vals: [true, false], fmt: v => v ? 'ON' : 'OFF' },
   { k: 'af', sw: 'B1', label: 'ALL FRUITS', vals: ['fixed', 'prog'], fmt: v => v === 'fixed' ? `FIXED ${ALLFRUIT.fixed}×` : `POT ${ALLFRUIT.base}-${ALLFRUIT.max}` },
-  { k: null, sw: 'B2', label: 'NOT USED', vals: [0], fmt: () => '----' },
+  { k: 'reel', sw: 'B2', label: 'REEL STYLE', vals: ['classic', 'modern'], fmt: v => v.toUpperCase() },
 ];
 const opGet = R => R.k == null ? 0 : R.root ? save[R.k] : save.op[R.k];
 function dipBits() { const ix = R => Math.max(0, R.vals.indexOf(opGet(R))); const c = ix(OP_ROWS[0]); return [c & 1, c >> 1 & 1, ix(OP_ROWS[1]), ix(OP_ROWS[2]), ix(OP_ROWS[3]), ix(OP_ROWS[4]), ix(OP_ROWS[5]), ix(OP_ROWS[6])]; }
-function dipBitsB() { return [Math.max(0, OP_ROWS[7].vals.indexOf(save.op.af)), 0, 0, 0]; }
+function dipBitsB() { return [Math.max(0, OP_ROWS[7].vals.indexOf(save.op.af)), Math.max(0, OP_ROWS[8].vals.indexOf(save.op.reel)), 0, 0]; }
 function renderOp() {
   const bits = dipBits(); $('dip').innerHTML = '<span class="lbl">ON<br>▲</span>' + bits.map((b, i) => `<span class="dipsw ${b ? 'on' : ''}"><i></i>${i + 1}</span>`).join('');
   $('dipB').innerHTML = '<span class="lbl">B<br>▲</span>' + dipBitsB().map((b, i) => `<span class="dipsw ${b ? 'on' : ''}"><i></i>${i + 1}</span>`).join('');
   $('svRows').innerHTML = OP_ROWS.map((R, i) => `<button class="svrow ${R.k == null || (R.dep && !save.op[R.dep]) ? 'dis' : ''}" data-i="${i}"><span class="k">SW ${R.sw.padEnd(3, ' ')} ${R.label}</span><span class="v">${R.fmt(opGet(R))}</span></button>`).join('');
   $('svRows').querySelectorAll('.svrow').forEach(b => b.onclick = () => { const R = OP_ROWS[+b.dataset.i]; if (R.k == null || (R.dep && !save.op[R.dep])) return; const v = R.vals[(R.vals.indexOf(opGet(R)) + 1) % R.vals.length]; if (R.root) save[R.k] = v; else save.op[R.k] = v; persist(); Sfx.click(); renderOp(); hud(); });
   const c = cond();
-  $('svNote').innerHTML = `<b>THREE BONUS CONDITION ${save.op.cond}</b> — modelled on Dyna Cherry Master '91 / I. Cherry number = cherry pairs for a CHERRY BONUS (here: +1 per drawn cherry line that is not a straight 3-cherry line; needs ${c[0]}); a straight 3-cell line of 3 cherries gives a CHERRY BONUS at once. Bell number = bell lines of 3+ for a BELL BONUS (needs ${c[1]}). BAR number = straight lines of 3 single BARs for a 1 BAR BONUS (needs ${c[2]}). Lower numbers = more bonuses, looser machine (skilled return ≈1.02–1.05 at 12-7-1 — fun credits only).<br>
+  $('svNote').innerHTML = `<b>THREE BONUS CONDITION ${save.op.cond}</b> — modelled on Dyna Cherry Master '91 / I. Cherry number = cherry pairs for a CHERRY BONUS (here: +1 per drawn cherry line, except straight 3-cherry lines; needs ${c[0]}); 3 cherries landing on any of the 8 classic lines start a CHERRY BONUS automatically. Bell number = bell lines of 3+ for a BELL BONUS (needs ${c[1]}). BAR number: 3 single BARs landing on a classic line start a 1 BAR BONUS automatically. Lower numbers = more bonuses, looser machine (skilled return ≈1.04–1.06, casual ≈0.82 at 12-7-1 — fun credits only).<br>
   <b>MIN. BET</b> — meters only charge at or above it. "8" maps to our smallest stake (BET 10), "16" to BET 20+.<br>
   <b>W-UP</b> — BIG (8–K) or SMALL (A–6). "7" is a LOSS or a TIE (push). <b>PAYOUT</b> 90% / 80% is set by Jokers shuffled into the 52-card deck (a Joker always loses): 7=LOSS uses +1 / +8 Jokers, 7=TIE +5 / +12, so a guess returns ≈90.6% / 80.0%. Disabled = wins are collected automatically.<br>
   <b>SKILL STOP</b> — ON: while the reels spin, tap a reel to stop it, STOP stops the next reel left→right, hold STOP (or keep tapping) to stop all. The result is fixed when the spin starts, so stopping never changes what lands — it only lands sooner. OFF: reels stop by themselves.<br>
-  <b>BANK B · ALL FRUITS</b> — pays instantly when all 9 symbols that land are fruit (cherry/orange/plum/melon) with all four kinds showing (≈1 in 40 spins, not during bonuses). FIXED pays ${ALLFRUIT.fixed}× your stake (skilled return ≈1.04–1.06, casual ≈0.75). POT (progressive) pays a pot that starts at ${ALLFRUIT.base}, grows +${ALLFRUIT.grow} per paid spin up to ${ALLFRUIT.max} (× bet level) — tuned to match FIXED: skilled ≈1.06–1.08, casual ≈0.77.`;
+  <b>B2 · REEL STYLE</b> — CLASSIC (default) copies the original cabinet as measured from gameplay video: all three reels start and stop together after about 1 second, spin too fast to read, slow for the last quarter second and stop dead. MODERN: reels stop one by one with an eased bounce and a slow-down tease when RED 7s show.<br>
+  <b>BANK B · ALL FRUITS</b> — pays instantly when all 9 symbols that land are fruit (cherry/orange/plum/melon) with all four kinds showing (≈1 in 40 spins, not during bonuses). FIXED pays ${ALLFRUIT.fixed}× your stake (skilled return ≈1.04–1.06, casual ≈0.82). POT (progressive) pays a pot that starts at ${ALLFRUIT.base}, grows +${ALLFRUIT.grow} per paid spin up to ${ALLFRUIT.max} (× bet level) — close to FIXED: skilled ≈1.06–1.08, casual ≈0.84.`;
 }
 // ---------- HUD ----------
 const ICON = {
@@ -1276,7 +1453,7 @@ function buildPaytable() {
   const c = cond();
   $('rules').innerHTML = `<b>How a round works:</b> pay ${SPIN_COST * lv} and SPIN. Then DRAW paylines: drag from a symbol through the gutters to matching symbols. Longer chains pay much more. <b>Lines may never touch or cross</b> — every gutter and crossing holds ONE line; touching another line BUSTS the new one. Press DONE (or let the ${DRAW_TIME}s fuse run out) to get paid, then COLLECT or W-UP.<br><br>
   <b>IQ Wild</b> joins any line; wild-only lines pay as 7s. <b>Any BAR</b>: mix BAR + Double BAR. <b>ALL FRUITS</b>: if all 9 symbols that land are fruit and all four kinds (cherry, orange, plum, melon) show, you win ${save.op.af === 'prog' ? 'the fruit pot (' + afAmount() + ' now)' : ALLFRUIT.fixed + '× your stake (' + afAmount() + ')'} instantly — before you draw. <b>STOP</b>: tap a reel or press STOP while spinning to stop early (results are decided at SPIN).<br><br><b>IQ Jackpot</b>: one line through 3+ RED 7s that landed wins the pot (grows every spin, scales with bet). <b>HOLD</b>: after a losing spin, hold up to 2 reels.<br><br>
-  <b>THREE BONUS</b> (condition ${save.op.cond}, Cherry Master style): <b>CHERRY BONUS</b> at once for 3 cherries on a straight 3-cell line (row/column/diagonal), or after ${c[0]} other cherry lines (pairs count) — one spin on 7s reels, 7s pay anywhere (2×7 = 2× stake … 9×7 = 1000×) · <b>BELL BONUS</b> after ${c[1]} bell lines of 3+ — take the POOL (grows with every RED 7 in the centre) + ${BONUS.bell.spins} free games, every bell pays · <b>1 BAR BONUS</b> for ${c[2]} straight line of 3 single BARs — ${BONUS.bar.spins} free games with SUPER BARs. Bonuses need BET ${minBetStake()}+.<br><br>
+  <b>THREE BONUS</b> (condition ${save.op.cond}, Cherry Master style): <b>CHERRY BONUS</b> automatically when 3 cherries land on one of the 8 classic lines (row/column/diagonal — no need to draw it; you still draw your lines first), or after ${c[0]} drawn cherry lines (pairs count) — one spin on 7s reels, 7s pay anywhere (2×7 = 2× stake … 9×7 = 1000×) · <b>BELL BONUS</b> after ${c[1]} bell lines of 3+ — take the POOL (grows with every RED 7 in the centre) + ${BONUS.bell.spins} free games, every bell pays · <b>1 BAR BONUS</b> automatically when 3 single BARs land on a classic line (IQ Wild may stand in) — ${BONUS.bar.spins} free games with SUPER BARs. Bonuses need BET ${minBetStake()}+.<br><br>
   <b>W-UP</b>: BIG (8–K) or SMALL (A–6), up to 5 doubles; 7 = ${save.op.seven.toUpperCase()}; Jokers always lose. Operator settings: ⚙ SERVICE on the title screen.<br><br>
   Fun credits only — no real money, nothing to buy. Broke? You get a free refill. <button class="btn glass" id="timerBtn" style="color:#1a0b22;border-color:#9b8cc8;font-size:13px;padding:5px 12px">Draw timer: ${save.timer ? 'ON' : 'OFF'}</button>`;
   $('timerBtn').onclick = () => { save.timer = !save.timer; persist(); Sfx.click(); buildPaytable(); };
@@ -1318,7 +1495,7 @@ function frame(now) {
   if (G.screen === 'game') {
     updateReels(now);
     if (G.phase === 'draw' && G.timerEnd) { const rem = G.timerEnd - now, tot = DRAW_TIME * 1000 / TS; $('fuse').style.width = clamp(rem / tot, 0, 1) * 100 + '%'; const sec = Math.ceil(rem * TS / 1000); if (sec !== G.timerSec) { G.timerSec = sec; if (sec <= 5 && sec > 0) Sfx.timer(); } if (rem <= 0) endDraw(); }
-    renderBoard(bctx, S, { grid: G.grid, reels: G.reels, lines: G.lines, drawing: G.drawing, used: G.used, burnt: G.burnt, held: G.phase === 'spin' ? G.heldShow : G.canHold && G.phase === 'idle' ? G.holds : null, now, hint: G.hint, flash: G.flash, anticip: G.anticip, af: G.af, theme: G.bonus && G.bonus.mode, sticky: G.bonus && G.bonus.sticky, anim: G.anim, pop: G.pop });
+    renderBoard(bctx, S, { autoLines: G.autoLines, grid: G.grid, reels: G.reels, lines: G.lines, drawing: G.drawing, used: G.used, burnt: G.burnt, held: G.phase === 'spin' ? G.heldShow : G.canHold && G.phase === 'idle' ? G.holds : null, now, hint: G.hint, flash: G.flash, anticip: G.anticip, af: G.af, theme: G.bonus && G.bonus.mode, sticky: G.bonus && G.bonus.sticky, anim: G.anim, pop: G.pop });
   } else demoTick(now);
   renderBg(now); renderFx();
 }
@@ -1328,7 +1505,7 @@ document.querySelectorAll('.tbm').forEach(el => { const c = el.querySelector('ca
 layout(); hud(); requestAnimationFrame(frame);
 // ---------- test hooks ----------
 window.__iq = {
-  marker: 'CHERRY_LINES_v4', stopReel, stopNext, stopAll, canStop, isAllFruits, afAmount, ALLFRUIT, G, save, demo, NODES, SYMBOLS, solveBoard, anyLineLeft, payOf, classOf,
+  marker: 'CHERRY_LINES_v4_1', stopReel, stopNext, stopAll, canStop, isAllFruits, afAmount, ALLFRUIT, G, save, demo, NODES, SYMBOLS, solveBoard, anyLineLeft, payOf, classOf,
   seed(n) { G.rng = mulberry(n); }, trigger(mode) { if (G.phase !== 'idle' || G.bonus) return false; G.queue.push(mode); afterRound(); return true; }, forceCard(c) { G.forcedCard = c; }, setOp(o) { Object.assign(save.op, o); persist(); hud(); }, curPayFn, cond, BONUS, CONDITIONS, force(grid) { G.forced = grid; }, fast(v) { TS = v; },
   boardClient(x, y) { return boardToScreen({ x, y }); }, pathPoints, mult, betLevel, jackpotNow,
   state() { return { pool: save.pool, phase: G.phase, credits: save.credits, win: G.win, lines: G.lines.map(L => ({ cells: L.cells, cls: L.cls, base: L.base })), burnt: [...G.burnt], grid: G.grid, canHold: G.canHold, holds: G.holds, meters: { ...save.meters }, bonus: G.bonus && { mode: G.bonus.mode, spin: G.bonus.spin, spins: G.bonus.spins, total: G.bonus.total, sticky: [...G.bonus.sticky] }, queue: G.queue.slice(), op: { ...save.op }, natural: G.natural, jp: jackpotNow(), bet: betLevel(), gam: G.gam && { amt: G.gam.amt, steps: G.gam.steps, last: G.gam.last, hist: G.gam.hist.slice(), busy: G.gam.busy } }; },
