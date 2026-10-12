@@ -224,6 +224,39 @@ body[class*=bm-] .cab .bulbs i{animation:chase3 .5s steps(1) infinite}
 .svbtn{font:inherit;font-weight:700;color:#020a04;background:#7dff8a;border-radius:3px;padding:7px 16px;box-shadow:0 3px 0 #1d5a26}
 .svbtn.alt{background:#1d5a26;color:#b6ffbe}
 @media (max-height:720px){.spin{width:84px;height:84px;font-size:19px}.led b{font-size:18px}#game{gap:4px}}
+
+/* ---- W-UP card table (v4.2, modelled on the Cherry Master double-up screen; own pixel art) ---- */
+#gambleOv.wup{background:rgba(0,0,0,.92)}
+.wtable{width:min(96vw,520px);background:#000;border:3px solid #1fd6d0;box-shadow:0 0 0 3px #063b3a,0 0 24px rgba(31,214,208,.35);padding:12px 12px 10px;font-family:'Press Start 2P',Fredoka,monospace;color:#fff;image-rendering:pixelated}
+.wtop{display:flex;align-items:flex-start;gap:10px}
+.wdeck{width:30%;image-rendering:pixelated}
+.wplay{width:30%;display:flex;flex-direction:column;align-items:center}
+.wcard{width:100%;image-rendering:pixelated}
+.wcard.flip{animation:wflip .28s steps(4)}
+@keyframes wflip{0%{transform:scaleX(1)}50%{transform:scaleX(0)}100%{transform:scaleX(1)}}
+.wres{margin-top:6px;font-weight:700;font-size:15px;letter-spacing:1px;color:#ffd23f;min-height:18px;text-align:center;white-space:nowrap}
+.wres.g{color:#3cff6a}
+.wled{flex:1;text-align:right;font-weight:700}
+.wled .lab{font-size:11px;letter-spacing:2px;color:#fff;margin-top:4px}
+.wled .dig{font-size:22px;letter-spacing:3px;color:#ff2a2a;text-shadow:0 0 6px rgba(255,40,40,.6);font-variant-numeric:tabular-nums}
+.wwin{font-size:20px;color:#ff2a2a;margin-top:8px;min-height:24px;letter-spacing:2px}
+.wwin.blink{animation:wbl .3s steps(2) 6}
+@keyframes wbl{50%{opacity:0}}
+.wstep{text-align:center;font-weight:700;font-size:13px;color:#7fe7ff;letter-spacing:1px;margin:8px 0 4px;min-height:16px}
+.wbot{display:flex;gap:10px;align-items:flex-end}
+.whcol{flex:1}.whcol .lab{font-size:11px;letter-spacing:2px;font-weight:700;margin-bottom:4px}
+.whist{display:flex;gap:3px;min-height:48px}
+.whist canvas{width:17%;image-rendering:pixelated}
+.wstage{width:30%;image-rendering:pixelated;border:2px solid #ffd23f;background:#2a0a3a}
+.wstage.go{animation:wstg .25s steps(2) 4}
+@keyframes wstg{50%{background:#22ff55}}
+.wbtns{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:10px}
+.lamp{font:700 15px Fredoka,sans-serif;border-radius:6px;padding:8px 2px 6px;border:2px solid #000;box-shadow:inset 0 -4px 0 rgba(0,0,0,.25),0 0 0 2px #333;cursor:pointer;display:flex;flex-direction:column;align-items:center;line-height:1.05;color:#1a0b22}
+.lamp small{font-size:10px;opacity:.8}
+.lamp.y{background:#ffe85a}.lamp.c{background:#5ff0ff}.lamp.o{background:#ffb347}
+.lamp.lit{box-shadow:inset 0 -4px 0 rgba(0,0,0,.25),0 0 0 2px #fff,0 0 14px #fff6a0}
+.lamp:disabled{filter:grayscale(.85) brightness(.45);cursor:default}
+.wrule{margin-top:8px;font-size:10px;color:#8aa;text-align:center;font-family:Fredoka,sans-serif}
 </style>
 </head>
 <body>
@@ -258,19 +291,21 @@ body[class*=bm-] .cab .bulbs i{animation:chase3 .5s steps(1) infinite}
     <div class="betbox"><small>BET</small><b id="bet">10</b></div>
     <button class="cbtn" id="betUp">+</button>
     <button class="spin" id="spinBtn">SPIN</button>
-    <div id="collectRow"><button class="cbtn green big2" id="collectBtn">COLLECT</button><button class="cbtn gold big2" id="gambleBtn">W-UP ×2</button></div>
+    <div id="collectRow"><button class="cbtn green big2" id="collectBtn">TAKE SCORE</button><button class="cbtn gold big2" id="gambleBtn">DOUBLE UP</button></div>
     <button class="cbtn" id="hintBtn" title="IQ hint">💡</button>
   </div>
 </section>
 <div id="bigOv" class="ov" style="background:radial-gradient(circle at 50% 50%,rgba(60,10,110,.55),rgba(8,2,20,.35) 70%)"><div id="bigIcons" class="fdance"></div><div class="bigwin" id="bigTitle">BIG WIN!</div><div class="bwAmt" id="bigAmt">0</div><div id="bigSub" style="font-weight:700;font-size:18px;letter-spacing:2px;text-shadow:0 2px 4px #000"></div><div class="blink" style="font-size:15px">TAP TO CONTINUE</div></div>
 <div id="bonusOv" class="ov"><div class="bigwin bTitle" id="bTitle">BONUS</div><canvas id="bIcon" width="16" height="16"></canvas><div class="bsub" id="bSub"></div><div class="rulecard" id="bRules"></div><button class="btn primary" id="bonusGo">START!</button></div>
-<div id="gambleOv" class="ov"><div class="card">
-  <h3>W-UP</h3>
-  <div class="wsub">DOUBLE UP · BIG or SMALL?</div>
-  <div class="cards"><div class="pc back" id="gCard"></div></div>
-  <div class="gwin" id="gAmt">0</div>
-  <div class="whist" id="gHist"></div>
-  <div class="row" style="margin-top:10px"><button class="cbtn wbtn" id="gSmall">SMALL<small>A – 6</small></button><button class="cbtn green" id="gTake">TAKE</button><button class="cbtn wbtn" id="gBig">BIG<small>8 – K</small></button></div>
+<div id="gambleOv" class="ov wup"><div class="wtable">
+  <div class="wtop">
+    <canvas id="gDeck" class="wdeck" width="44" height="36"></canvas>
+    <div class="wplay"><canvas id="gCard" class="wcard" width="26" height="36"></canvas><div class="wres" id="gRes">BIG or SMALL ?</div></div>
+    <div class="wled"><div class="lab">CREDIT</div><div class="dig" id="gCred">00000</div><div class="lab">D-UP</div><div class="dig" id="gAmt">00000</div><div class="wwin" id="gWinLab"></div></div>
+  </div>
+  <div class="wstep" id="gStep"></div>
+  <div class="wbot"><div class="whcol"><div class="lab">LAST 5 DATA</div><div class="whist" id="gHist"></div></div><canvas class="wstage" id="gStage" width="32" height="32"></canvas></div>
+  <div class="wbtns"><button class="lamp y" id="gBig">BIG<small>8 – K</small></button><button class="lamp y" id="gSmall">SMALL<small>A – 6</small></button><button class="lamp c" id="gTake">TAKE<small>SCORE</small></button><button class="lamp o" id="gDup">D-UP<small>AGAIN</small></button></div>
   <div class="wrule" id="gRule"></div>
 </div></div>
 <div id="opOv" class="ov"><div class="svc">
@@ -292,7 +327,7 @@ body[class*=bm-] .cab .bulbs i{animation:chase3 .5s steps(1) infinite}
 <canvas id="fx"></canvas>
 <div id="crt"></div>
 <script>
-// ======================= IQ Cherry Lines – rules, reels, routing & solver (CHERRY_LINES_v4_1 · Cherry Master-style bonuses + all fruits + skill stop) =======================
+// ======================= IQ Cherry Lines – rules, reels, routing & solver (CHERRY_LINES_v4_2 · Cherry Master-style bonuses + all fruits + skill stop) =======================
 // Board: 100x100 units. 3x3 reel windows separated by gutters. Lines live on a graph:
 //   9 cell nodes, 16 lattice (gutter crossing) nodes, 24 gutter segment nodes.
 // A line visits matching cells and travels through gutters. Every node can carry ONE line:
@@ -774,7 +809,7 @@ const easeBack = (t, c = 1.1) => 1 + (c + 1) * Math.pow(t - 1, 3) + c * Math.pow
 const easeOut = t => 1 - Math.pow(1 - t, 3);
 const SAVE_KEY = 'iqlines.cherry.v1', START_CREDITS = 500;
 const OP_DEFAULT = { cond: '12-7-1', minBet: 8, wup: true, seven: 'loss', payout: 90, skillStop: true, af: 'fixed', reel: 'classic' };
-let save = { credits: START_CREDITS, jpBase: JP_BASE, meters: { cherry: 0, bell: 0, bar: 0 }, betIx: 0, muted: false, music: true, crt: false, timer: true, best: 0, spins: 0, refills: 0, seen: {}, op: { ...OP_DEFAULT }, bonusCount: { cherry: 0, bell: 0, bar: 0 }, afPot: ALLFRUIT.base, afHits: 0, pool: 0 };
+let save = { credits: START_CREDITS, jpBase: JP_BASE, meters: { cherry: 0, bell: 0, bar: 0 }, betIx: 0, muted: false, music: true, crt: false, timer: true, best: 0, spins: 0, refills: 0, seen: {}, op: { ...OP_DEFAULT }, bonusCount: { cherry: 0, bell: 0, bar: 0 }, afPot: ALLFRUIT.base, afHits: 0, pool: 0, wupHist: [] };
 try { const s = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null'); if (s) { const d = save; save = Object.assign({}, d, s); save.meters = Object.assign({}, d.meters, s.meters); save.op = Object.assign({}, d.op, s.op); save.seen = Object.assign({}, s.seen); save.bonusCount = Object.assign({}, d.bonusCount, s.bonusCount); delete save.meter; if (!CONDITIONS[save.op.cond]) save.op.cond = OP_DEFAULT.cond; save.afPot = clamp(+save.afPot || ALLFRUIT.base, ALLFRUIT.base, ALLFRUIT.max); } } catch (e) {}
 function persist() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch (e) {} }
 const betLevel = () => BET_LEVELS[save.betIx];
@@ -1226,7 +1261,7 @@ async function endDraw() {
   else if (total > 0) { Sfx.seq([72, 76, 79, 84], .06, { vol: .07 }); confetti(.35); }
   if (total === 0) { G.flash = null; Sfx.nowin(); G.phase = 'idle'; if (!B) { G.canHold = true; msg('No win — tap HOLD on up to 2 reels, then SPIN'); } else msg('No win this free spin'); hud(); afterRound(); return; }
   if (B || !save.op.wup) { await collect(); return; }
-  G.phase = 'result'; msg(`WIN ${total}! COLLECT it — or W-UP: double-or-nothing`); hud();
+  G.phase = 'result'; msg(`WIN ${total}! TAKE SCORE — or DOUBLE UP (BIG / SMALL)`); hud();
 }
 async function chargeMeters() {
   const gain = meterGain(G.lines, G.grid); if (!BONUS_IDS.some(k => gain[k])) return;
@@ -1296,33 +1331,67 @@ function showOv(id, on) { $(id).classList.toggle('on', on); }
 const RANKS = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'], SUITS = ['♠', '♥', '♦', '♣'];
 const jokers = () => WUP_JOKERS[save.op.seven][save.op.payout];
 const cardTxt = c => c.v === 0 ? '★' : RANKS[c.v - 1];
-function cardEl(el, c) {
-  el.className = 'pc ' + (c.v === 0 ? 'joker' : c.s === 1 || c.s === 2 ? 'red' : 'blk'); void el.offsetWidth; el.classList.add('flip');
-  el.innerHTML = c.v === 0 ? '<div class="v">JOKER</div><div class="s">★</div>' : `<div class="v">${RANKS[c.v - 1]}</div><div class="s">${SUITS[c.s]}</div>`;
+// pixel-art playing cards (own design, drawn in code): 26x36 big, rank glyphs 3x5, suits 5x5
+const GLYPH = { A: ['.#.', '#.#', '###', '#.#', '#.#'], 2: ['##.', '..#', '.#.', '#..', '###'], 3: ['##.', '..#', '.#.', '..#', '##.'], 4: ['#.#', '#.#', '###', '..#', '..#'], 5: ['###', '#..', '##.', '..#', '##.'],
+  6: ['.##', '#..', '###', '#.#', '###'], 7: ['###', '..#', '.#.', '.#.', '.#.'], 8: ['###', '#.#', '###', '#.#', '###'], 9: ['###', '#.#', '###', '..#', '##.'], 1: ['.#', '##', '.#', '.#', '.#'], 0: ['###', '#.#', '#.#', '#.#', '###'],
+  J: ['..#', '..#', '..#', '#.#', '.#.'], Q: ['.#.', '#.#', '#.#', '##.', '.##'], K: ['#.#', '##.', '#..', '##.', '#.#'] };
+const SUITPX = [['..#..', '.###.', '#####', '#####', '..#..'], ['#.#.#', '#####', '#####', '.###.', '..#..'], ['..#..', '.###.', '#####', '.###.', '..#..'], ['.###.', '.###.', '#####', '#####', '..#..']]; // ♠ ♥ ♦ ♣
+SUITPX[0] = ['..#..', '.###.', '#####', '#####', '.#.#.']; SUITPX[1] = ['.#.#.', '#####', '#####', '.###.', '..#..']; SUITPX[3] = ['..#..', '.###.', '#.#.#', '#####', '..#..'];
+function px(x, pat, ox, oy, col, sc = 1) { x.fillStyle = col; pat.forEach((r, y) => [...r].forEach((ch, i) => { if (ch === '#') x.fillRect(ox + i * sc, oy + y * sc, sc, sc); })); }
+function drawCard(cv, c, ox = 0) { // c = null -> back
+  const x = cv.getContext('2d'); if (!ox) x.clearRect(0, 0, cv.width, cv.height); x.imageSmoothingEnabled = false;
+  const W = 26, H = 36; x.fillStyle = '#111'; x.fillRect(ox + 1, 0, W - 2, H); x.fillRect(ox, 1, W, H - 2);
+  if (!c) { x.fillStyle = '#f4e9d8'; x.fillRect(ox + 1, 1, W - 2, H - 2); x.fillStyle = '#c8164a'; x.fillRect(ox + 3, 3, W - 6, H - 6);
+    x.fillStyle = '#ff7aa8'; for (let y = 4; y < H - 4; y += 2) for (let i = 4 + (y / 2 % 2); i < W - 4; i += 2) x.fillRect(ox + i, y, 1, 1); return; }
+  x.fillStyle = '#fffaf0'; x.fillRect(ox + 1, 1, W - 2, H - 2);
+  if (c.v === 0) { px(x, ['#####', '.###.', '#####', '#.#.#'], ox + 8, 10, '#8a4dff', 2); x.fillStyle = '#8a4dff'; x.fillRect(ox + 4, 26, 18, 2); return; }
+  const red = c.s === 1 || c.s === 2, col = red ? '#e8203a' : '#1a0b22', r = RANKS[c.v - 1];
+  const gl = r === '10' ? [GLYPH[1], GLYPH[0]] : [GLYPH[r]];
+  let gx = ox + 3; for (const g of gl) { px(x, g, gx, 3, col); gx += g[0].length + 1; }
+  px(x, SUITPX[c.s], ox + 3, 9, col);
+  px(x, SUITPX[c.s], ox + 8, 14, col, 2);
+  gx = ox + W - 3 - gl.reduce((a, g) => a + g[0].length + 1, -1); for (const g of gl) { px(x, g, gx, H - 8, col); gx += g[0].length + 1; }
 }
+function drawDeck() { const cv = $('gDeck'), x = cv.getContext('2d'); x.clearRect(0, 0, cv.width, cv.height); const h = save.wupHist || [];
+  if (h.length) drawCard(cv, h[h.length - 1], 0); for (let i = 0; i < 3; i++) drawCard(cv, null, 6 + i * 4); }
+function drawStage(step, lost) { const cv = $('gStage'), x = cv.getContext('2d'); x.imageSmoothingEnabled = false; x.fillStyle = lost ? '#1a1a1a' : '#2a0a3a'; x.fillRect(0, 0, 32, 32);
+  x.fillStyle = '#ffd23f'; for (let i = 0; i < 5; i++) { x.globalAlpha = i < step ? 1 : .2; x.fillRect(3 + i * 6, 27, 4, 3); } x.globalAlpha = 1;
+  const hop = lost ? 0 : [0, 2, 4, 3, 5, 6][Math.min(step, 5)]; x.save(); if (lost) x.globalAlpha = .45; drawSprite(x, 'cherry', 16, 13 - hop, 18 + (lost ? 0 : step)); x.restore();
+  if (step && !lost) { x.fillStyle = '#fff'; for (let i = 0; i < step; i++) x.fillRect((7 + i * 9) % 30, (3 + i * 5) % 10, 1, 1); } }
+const pad5 = n => String(Math.max(0, n)).padStart(5, '0');
 function gambleUi() {
-  const g = G.gam; $('gAmt').textContent = g.amt ? `${g.amt}  →  ${g.amt * 2}?` : 'LOST';
-  $('gHist').innerHTML = g.hist.slice(-9).map(c => `<span class="${c.v === 0 ? 'j' : c.s === 1 || c.s === 2 ? 'r' : ''}">${cardTxt(c)}</span>`).join('') + (g.steps ? `<span style="border:0;background:none;min-width:34px">${g.steps}/5</span>` : '');
-  const j = jokers(); $('gRule').textContent = `7 = ${save.op.seven.toUpperCase()} · deck 52 + ${j} JOKER${j > 1 ? 'S' : ''} (Joker always loses) · return per guess ≈ ${(wupReturn(save.op.seven, save.op.payout) * 100).toFixed(1)}%`;
+  const g = G.gam; $('gAmt').textContent = pad5(g.amt); $('gCred').textContent = pad5(save.credits);
+  const hist = (save.wupHist || []).slice(-5); $('gHist').innerHTML = ''; hist.forEach(c => { const cv = document.createElement('canvas'); cv.width = 26; cv.height = 36; drawCard(cv, c); $('gHist').appendChild(cv); });
+  $('gStep').textContent = g.state === 'lost' ? 'DOUBLE UP LOST' : g.steps ? `D-UP ${g.steps}/5 · NEXT ${g.amt * 2}` : `DOUBLE UP · ${g.amt} → ${g.amt * 2} ?`;
+  const choose = g.state === 'choose', after = g.state === 'after';
+  $('gBig').disabled = $('gSmall').disabled = !choose; $('gDup').disabled = !after; $('gTake').disabled = !(choose || after);
+  $('gBig').classList.toggle('lit', choose); $('gSmall').classList.toggle('lit', choose); $('gDup').classList.toggle('lit', after); $('gTake').classList.toggle('lit', choose || after);
+  const j = jokers(); $('gRule').textContent = `7 = ${save.op.seven === 'tie' ? 'EVEN (push)' : 'LOSE'} · deck 52 + ${j} JOKER${j > 1 ? 'S' : ''} (Joker always loses) · return per guess ≈ ${(wupReturn(save.op.seven, save.op.payout) * 100).toFixed(1)}%`;
 }
+function dealBack() { const g = G.gam; drawCard($('gCard'), null); drawDeck(); g.state = 'choose'; $('gRes').className = 'wres'; $('gRes').textContent = 'BIG or SMALL ?'; $('gWinLab').textContent = ''; drawStage(g.steps, false); gambleUi(); }
 function openGamble() {
   if (G.phase !== 'result' || !save.op.wup) return; Sfx.click(); G.phase = 'gamble';
-  G.gam = { amt: G.win, steps: 0, hist: [], busy: false, last: null };
-  $('gCard').className = 'pc back'; $('gCard').innerHTML = ''; gambleUi(); showOv('gambleOv', true); hud();
+  G.gam = { amt: G.win, steps: 0, hist: [], busy: false, last: null, state: 'choose' };
+  dealBack(); showOv('gambleOv', true); hud();
 }
 async function guess(big) {
-  const g = G.gam; if (!g || g.busy) return; g.busy = true; Sfx.flip();
-  const c = G.forcedCard || wupDraw(G.rng, jokers()); G.forcedCard = null;
-  cardEl($('gCard'), c); await wait(520); g.hist.push(c);
+  const g = G.gam; if (!g || g.busy || g.state !== 'choose') return; g.busy = true; g.state = 'reveal'; Sfx.click();
+  $('gRes').textContent = big ? 'BIG' : 'SMALL'; gambleUi(); await wait(380);
+  const c = G.forcedCard || wupDraw(G.rng, jokers()); G.forcedCard = null; Sfx.flip();
+  const cv = $('gCard'); cv.classList.remove('flip'); void cv.offsetWidth; cv.classList.add('flip'); await wait(140); drawCard(cv, c); await wait(300);
+  g.hist.push(c); save.wupHist = (save.wupHist || []).concat([c]).slice(-5); persist();
   const res = c.v === 0 ? 'lose' : c.v === 7 ? (save.op.seven === 'tie' ? 'tie' : 'lose') : (big ? c.v >= 8 : c.v <= 6) ? 'win' : 'lose';
-  g.last = res;
-  if (res === 'tie') { toast('7 — TIE! Your win stays, go again'); Sfx.click(); }
-  else if (res === 'win') { g.amt *= 2; g.steps++; Sfx.gWin(); const cc = centerOf($('gAmt')); burst(cc.x, cc.y, '#22c55e', 20, 5); popText(cc.x, cc.y - 20, 'DOUBLED!', 'gold'); }
-  else { g.amt = 0; gambleUi(); Sfx.gLose(); toast(c.v === 0 ? 'JOKER — the house wins' : c.v === 7 ? '7 counts as a LOSS' : (big ? 'SMALL card' : 'BIG card') + ' — lost'); await wait(1300); closeGamble(false); return; }
-  gambleUi(); await wait(750);
-  if (g.steps >= 5) { toast('5 doubles — max! Taking the win'); await wait(500); closeGamble(true); return; }
-  $('gCard').className = 'pc back'; $('gCard').innerHTML = ''; g.busy = false;
+  g.last = res; $('gRes').className = 'wres g'; $('gRes').textContent = c.v === 0 ? 'JOKER' : c.v === 7 ? 'SEVEN' : c.v >= 8 ? 'BIG' : 'SMALL';
+  const wl = $('gWinLab'); wl.classList.remove('blink'); void wl.offsetWidth;
+  if (res === 'tie') { wl.textContent = 'EVEN'; wl.classList.add('blink'); Sfx.click(); }
+  else if (res === 'win') { const from = g.amt; g.amt *= 2; g.steps++; wl.textContent = 'WIN'; wl.classList.add('blink'); Sfx.gWin(); const st = $('gStage'); st.classList.remove('go'); void st.offsetWidth; st.classList.add('go'); drawStage(g.steps, false);
+    for (let k = 1; k <= 8; k++) { $('gAmt').textContent = pad5(Math.round(from + (g.amt - from) * k / 8)); await wait(40); } }
+  else { const lost = g.amt; g.amt = 0; wl.textContent = 'LOSE'; drawStage(g.steps, true); $('gAmt').textContent = pad5(0); Sfx.gLose(); toast(c.v === 0 ? 'JOKER — the house wins' : c.v === 7 ? '7 counts as a LOSS' : (big ? 'SMALL card' : 'BIG card') + ` — lost ${lost}`); drawDeck(); g.state = 'lost'; gambleUi(); await wait(1400); closeGamble(false); return; }
+  drawDeck();
+  if (g.steps >= 5) { g.state = 'max'; gambleUi(); toast('5 doubles — max! Taking the score'); await wait(900); closeGamble(true); return; }
+  g.state = 'after'; g.busy = false; gambleUi(); msg('D-UP to double again — or TAKE SCORE');
 }
+function dup() { const g = G.gam; if (!g || g.busy || g.state !== 'after') return; Sfx.click(); dealBack(); }
 function closeGamble(take) {
   showOv('gambleOv', false); const g = G.gam; G.gam = null;
   if (take && g.amt > 0) { G.win = g.amt; collect(g.amt); }
@@ -1471,7 +1540,7 @@ $('spinBtn').addEventListener('pointerdown', () => { lpFired = false; clearTimeo
 $('spinBtn').onclick = () => { if (lpFired) { lpFired = false; return; } if (G.phase === 'spin') { if (canStop()) stopNext(); return; } if (G.phase === 'draw') { Sfx.click(); endDraw(); } else doSpin(); };
 $('collectBtn').onclick = () => { if (G.phase === 'result') { Sfx.click(); collect(); } };
 $('gambleBtn').onclick = openGamble;
-$('gBig').onclick = () => guess(true); $('gSmall').onclick = () => guess(false); $('gTake').onclick = () => { if (G.gam && !G.gam.busy) { Sfx.click(); closeGamble(true); } };
+$('gBig').onclick = () => guess(true); $('gSmall').onclick = () => guess(false); $('gDup').onclick = dup; $('gTake').onclick = () => { if (G.gam && !G.gam.busy && (G.gam.state === 'choose' || G.gam.state === 'after')) { Sfx.click(); closeGamble(true); } };
 $('betDn').onclick = () => { if (save.betIx > 0) { save.betIx--; persist(); Sfx.click(); hud(); } };
 $('betUp').onclick = () => { if (save.betIx < BET_LEVELS.length - 1) { save.betIx++; persist(); Sfx.click(); hud(); } };
 $('hintBtn').onclick = () => { if (G.phase !== 'draw' || G.hintUsed) return; const s = solveBoard(G.grid, { used: G.used, burnt: G.burnt, payFn: curPayFn() }); if (!s.lines.length) { toast('No lines left'); return; } G.hintUsed = true; G.hint = s.lines[0]; Sfx.seq([84, 88, 91], .06, { vol: .06 }); msg(`IQ hint: ${infoOf(G.hint.cls).name} ×${G.hint.cells.length}`); setTimeout(() => { G.hint = null; }, 2600 / TS); hud(); };
@@ -1505,7 +1574,7 @@ document.querySelectorAll('.tbm').forEach(el => { const c = el.querySelector('ca
 layout(); hud(); requestAnimationFrame(frame);
 // ---------- test hooks ----------
 window.__iq = {
-  marker: 'CHERRY_LINES_v4_1', stopReel, stopNext, stopAll, canStop, isAllFruits, afAmount, ALLFRUIT, G, save, demo, NODES, SYMBOLS, solveBoard, anyLineLeft, payOf, classOf,
+  marker: 'CHERRY_LINES_v4_2', stopReel, stopNext, stopAll, canStop, isAllFruits, afAmount, ALLFRUIT, G, save, demo, NODES, SYMBOLS, solveBoard, anyLineLeft, payOf, classOf,
   seed(n) { G.rng = mulberry(n); }, trigger(mode) { if (G.phase !== 'idle' || G.bonus) return false; G.queue.push(mode); afterRound(); return true; }, forceCard(c) { G.forcedCard = c; }, setOp(o) { Object.assign(save.op, o); persist(); hud(); }, curPayFn, cond, BONUS, CONDITIONS, force(grid) { G.forced = grid; }, fast(v) { TS = v; },
   boardClient(x, y) { return boardToScreen({ x, y }); }, pathPoints, mult, betLevel, jackpotNow,
   state() { return { pool: save.pool, phase: G.phase, credits: save.credits, win: G.win, lines: G.lines.map(L => ({ cells: L.cells, cls: L.cls, base: L.base })), burnt: [...G.burnt], grid: G.grid, canHold: G.canHold, holds: G.holds, meters: { ...save.meters }, bonus: G.bonus && { mode: G.bonus.mode, spin: G.bonus.spin, spins: G.bonus.spins, total: G.bonus.total, sticky: [...G.bonus.sticky] }, queue: G.queue.slice(), op: { ...save.op }, natural: G.natural, jp: jackpotNow(), bet: betLevel(), gam: G.gam && { amt: G.gam.amt, steps: G.gam.steps, last: G.gam.last, hist: G.gam.hist.slice(), busy: G.gam.busy } }; },
