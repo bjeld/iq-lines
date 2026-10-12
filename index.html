@@ -327,7 +327,7 @@ body[class*=bm-] .cab .bulbs i{animation:chase3 .5s steps(1) infinite}
 <canvas id="fx"></canvas>
 <div id="crt"></div>
 <script>
-// ======================= IQ Cherry Lines – rules, reels, routing & solver (CHERRY_LINES_v4_2 · Cherry Master-style bonuses + all fruits + skill stop) =======================
+// ======================= IQ Cherry Lines – rules, reels, routing & solver (CHERRY_LINES_v4_3 · Cherry Master-style bonuses + all fruits + skill stop) =======================
 // Board: 100x100 units. 3x3 reel windows separated by gutters. Lines live on a graph:
 //   9 cell nodes, 16 lattice (gutter crossing) nodes, 24 gutter segment nodes.
 // A line visits matching cells and travels through gutters. Every node can carry ONE line:
@@ -347,6 +347,8 @@ const SYMBOLS = {
   seven: { name: 'Red 7', col: '#ff3b3b', light: '#ffb0b0', dark: '#9b0010', w: 1.5, pay: [6, 25, 70, 180] },
   wild: { name: 'IQ Wild', col: '#ff4fb8', light: '#ffc4e6', dark: '#a0006a', w: 0.45, pay: [6, 25, 70, 180] },
   // bonus-reel-only symbols (weight 0 on the normal reels)
+  seven3: { name: 'Triple 7', col: '#ff3b3b', light: '#ffb0b0', dark: '#9b0010', w: 0, pay: [6, 25, 70, 180] }, // Cherry Bonus reels: counts as a RED 7
+  bar3: { name: 'Triple BAR', col: '#2fd04a', light: '#b6f5c0', dark: '#138a2a', w: 0, pay: [3, 14, 35, 90], bar: 1 }, // Cherry Bonus reels
   superbar: { name: 'Super BAR', col: '#ff3b3b', light: '#ffd23f', dark: '#9b0010', w: 0, pay: [4, 20, 50, 120], bar: 1 },
   blank: { name: 'Blank', col: '#ffffff', light: '#ffffff', dark: '#999999', w: 0, pay: [0, 0, 0, 0], blank: 1 },
 };
@@ -392,6 +394,7 @@ function nodeAt(x, y) { // which graph region a board point is in
 // ---------- symbol classes ----------
 function classOf(syms) { // syms: symbols of cells in the line, in order
   if (syms.includes('blank')) return null;
+  syms = syms.map(s => s === 'seven3' ? 'seven' : s);
   const real = syms.filter(s => s !== 'wild');
   if (!real.length) return 'wild';
   if (real.every(s => s === real[0])) return real[0];
@@ -401,7 +404,7 @@ function classOf(syms) { // syms: symbols of cells in the line, in order
 function canJoin(syms, s) { return classOf(syms.concat([s])) !== null; }
 function payOf(cls, n) { if (n < 2 || !cls) return 0; const t = cls === 'anybar' ? ANYBAR.pay : SYMBOLS[cls].pay; return t[Math.min(n, 5) - 2]; }
 function infoOf(cls) { return cls === 'anybar' ? ANYBAR : SYMBOLS[cls]; }
-const isJackpot = (cls, cells, grid) => cls === 'seven' && cells.filter(id => grid[NODES[id].r][NODES[id].c] === 'seven').length >= 3; // three REAL sevens in one line
+const isJackpot = (cls, cells, grid) => cls === 'seven' && cells.filter(id => { const s = grid[NODES[id].r][NODES[id].c]; return s === 'seven' || s === 'seven3'; }).length >= 3; // three REAL sevens in one line
 // BFS from cell a to cell b through free gutter nodes only
 function route(a, b, used) {
   const prev = new Int16Array(NODES.length).fill(-1), seen = new Uint8Array(NODES.length); const q = [a]; seen[a] = 1;
@@ -465,7 +468,7 @@ const CONDITIONS = { '12-7-1': [12, 7, 1], '9-5-1': [9, 5, 1], '6-3-1': [6, 3, 1
 const MIN_BET_OPTS = { 8: 1, 16: 2 }; // "minimum bet for bonus" 8 / 16 credits -> our bet levels (BET 10 / BET 20)
 const BONUS_IDS = ['cherry', 'bell', 'bar'];
 const BONUS = {
-  cherry: { name: 'CHERRY BONUS', spins: 1, reel: { blank: 10, seven: .6, wild: .12, cherry: 3, bar: 2, bar2: 1.2 } },
+  cherry: { name: 'CHERRY BONUS', spins: 1, reel: { blank: 3.4, seven3: .26, wild: .06, cherry: 3, bar: 1.4, bar2: 1, bar3: .8 } },
   bell: { name: 'BELL BONUS', spins: 7, reel: { blank: 9, bell: 5, bar: 2, bar2: 1, seven: 1, wild: .25 }, single: 1 },
   bar: { name: '1 BAR BONUS', spins: 7, reel: { blank: 10, bar: 4, bar2: 2, superbar: .6, seven: 1 }, single: 1 },
 };
@@ -506,7 +509,7 @@ function bonusPayFn() { return payOf; }
 function bonusExtras(B, lines, grid) {
   if (!B) return []; const out = [], f = grid.flat();
   if (f.every(x => x === 'blank')) out.push({ cells: ALL9.slice(), amt: BLANK_ALL * SPIN_COST, label: 'ALL BLANK' });
-  if (B.mode === 'cherry') { const ids = ALL9.filter(id => f[id] === 'seven' || f[id] === 'wild'), m = SEVENS_PAY[ids.length]; if (m) out.push({ cells: ids, amt: m * SPIN_COST, label: `ALL ${ids.length} 7` }); }
+  if (B.mode === 'cherry') { const ids = ALL9.filter(id => f[id] === 'seven' || f[id] === 'seven3' || f[id] === 'wild'), m = SEVENS_PAY[ids.length]; if (m) out.push({ cells: ids, amt: m * SPIN_COST, label: `ALL ${ids.length} 7` }); }
   if (B.mode === 'bell') ALL9.filter(id => f[id] === 'bell').forEach(id => out.push({ cells: [id], amt: BONUS.bell.single, label: 'BELL' }));
   if (B.mode === 'bar') ALL9.filter(id => f[id] === 'superbar').forEach(id => out.push({ cells: [id], amt: BONUS.bar.single, label: 'SUPER BAR' }));
   return out;
@@ -523,7 +526,7 @@ const PAL = {
   k: '#1a0b22', r: '#e8203a', R: '#9b0f26', w: '#fff3f0', g: '#3cc45a', G: '#1b7a32', b: '#7a4320',
   o: '#ff9f1a', O: '#cc5f00', p: '#8a4dff', P: '#4f1fa8', q: '#c9a6ff', s: '#2a0a14', l: '#d9ffb8', m: '#2fa84c', M: '#13602a',
   y: '#ffd23f', Y: '#c98a00', v: '#fff6c0', u: '#2f7bff', U: '#0b3fb3', t: '#14b8d8', T: '#05708c', z: '#ff4fb8', Z: '#a0006a', x: '#ffd0ea', n: '#ff6b6b',
-  e: '#1fb04a', E: '#0b6a2a', h: '#0f5a1e', j: '#4fc85a', a: '#f0354a', f: '#ffc21a',
+  K: '#0c0c0c', m: '#2fd04a', e: '#1fb04a', E: '#0b6a2a', h: '#0f5a1e', j: '#4fc85a', a: '#f0354a', f: '#ffc21a',
 };
 const SPR = {
   cherry: [
@@ -703,6 +706,113 @@ Object.assign(SPR, {
     '................',
   ],
 });
+// v4.3: TRIPLE 7 (Cherry Bonus reels) and BAR plates in the style of the Dyna screen: black plate, green B R, orange rim, candy-striped red numeral (24x24, own pixel art)
+Object.assign(SPR, {
+  seven3: [
+    '........................',
+    '....kkkkkkkkkkkkkkkk....',
+    '....krrrrrrrrrrrrrRk....',
+    '....krwwwwwwwwwwwrRk....',
+    '....krrrrrrrrrrrrrRk....',
+    '....krrrrrrrrrrrrrRk....',
+    '....kkkkkkkkkkkrrrRk....',
+    'kkkkkkkkkk....krrRkkkkkk',
+    'rrrrrrrrRk...kkrrRkrrrrR',
+    'rrrrrrrrRk...krrRkkrrrrR',
+    'rrrrrrrrRk..kkrrRkrrrrrR',
+    'kkkkkkrrRk..krrRkkkkkrrR',
+    '....kkrRkk.kkrrRk..kkrRk',
+    '....krRkk..krrRkk..krRkk',
+    '...kkrRk..kkrrRk..kkrRk.',
+    '...krRkk..krrRkk..krRkk.',
+    '..kkrRk..kkrrRk..kkrRk..',
+    '..krRkk..krrRkk..krRkk..',
+    '.kkrRk..kkrrRk..kkrRk...',
+    '.krRkk..krrRkk..krRkk...',
+    '.kkkk..kkrrRk...kkkk....',
+    '.......krrrRk...........',
+    '.......kkkkkk...........',
+    '........................',
+  ],
+  bar: [
+    '........................',
+    '........................',
+    '.........RRRRRR.........',
+    '.........RrrrwR.........',
+    '.......RRRrrwrR.........',
+    '.......RrrrwrrR.........',
+    'oooooooRRRwrrrRooooooooo',
+    'ommmmmmmmRrrrwRmmmmmmmmo',
+    'omKmmKKKKRrrwrRKKmmKKKmo',
+    'omKmmKKKKRrwrrRKKmmKKKmo',
+    'omKmKmKKKRwrrrRKKmKmKKmo',
+    'omKmKmKKKRrrrwRKKmKmKKmo',
+    'omKmmKKKKRrrwrRKKmmKKKmo',
+    'omKmmKKKKRrwrrRKKmmKKKmo',
+    'omKmKmKKKRwrrrRKKmmKKKmo',
+    'omKmKmKKKRrrrwRKKmmKKKmo',
+    'ommmmmmmmRrrwrRmmmmmmmmo',
+    'oooooooRRRrwrrRRRooooooo',
+    '.......RrrwrrrwrR.......',
+    '.......RrwrrrwrrR.......',
+    '.......RwrrrwrrrR.......',
+    '.......RRRRRRRRRR.......',
+    '........................',
+    '........................',
+  ],
+  bar2: [
+    '........................',
+    '........................',
+    '........RRRRRRRR........',
+    '........RwrrrwrR........',
+    '......RRRrrrwrrRRR......',
+    '......RwrrrRRrrwrR......',
+    'ooooooRRRRRRRrwrrRoooooo',
+    'ommmmmmmmmmmRwrrrRmmmmmo',
+    'omKmmKKKKKRRRrrrwRmKKKmo',
+    'omKmmKKKKKRwrrrRRRmKKKmo',
+    'omKmKmKKRRRrrrwRKmKmKKmo',
+    'omKmKmKKRwrrrRRRKmKmKKmo',
+    'omKmmKKKRrrrwRKKKmmKKKmo',
+    'omKmmKRRRrrwrRKKKmmKKKmo',
+    'omKmKmRrrrwRRRKKKmmKKKmo',
+    'omKmKmRrrwrRKKKKKmmKKKmo',
+    'ommmmmRrwrrRmmmmmmmmmmmo',
+    'ooooooRwrrrRRRRRRRoooooo',
+    '......RrrrwrrrwrrR......',
+    '......RrrwrrrwrrrR......',
+    '......RrwrrrwrrrwR......',
+    '......RRRRRRRRRRRR......',
+    '........................',
+    '........................',
+  ],
+  bar3: [
+    '........................',
+    '........................',
+    '......RRRRRRRRRR........',
+    '......RrrwrrrwrR........',
+    '......RrwrrrwrrRRR......',
+    '......RwrrrwrrrwrR......',
+    'ooooooRRRRRRRrwrrRoooooo',
+    'ommmmmmmmmmmRwrrrRmmmmmo',
+    'omKmmKKKRRRRRrrrwRmKKKmo',
+    'omKmmKKKRrrwrrrRRRmKKKmo',
+    'omKmKmKKRrwrrrwRRRKmKKmo',
+    'omKmKmKKRwrrrwrrrRKmKKmo',
+    'omKmmKKKRRRRRrrrwRmKKKmo',
+    'omKmmKKKKKKKRrrwrRmKKKmo',
+    'omKmKmKKKKKKRrwrrRmKKKmo',
+    'omKmKmKKKKKKRwrrrRmKKKmo',
+    'ommmmmRRRRmmRrrrwRmmmmmo',
+    'ooooooRwrRRRRrrwrRoooooo',
+    '......RrrrwrrrwrrR......',
+    '......RrrwrrrwrrrR......',
+    '......RrwrrrwrrRRR......',
+    '......RRRRRRRRRR........',
+    '........................',
+    '........................',
+  ],
+});
 // SUPER BAR (1 BAR BONUS only): red plate with gold BAR letters under a gold "SUPER" band (word drawn as text)
 SPR.superbar = ['kkkkkkkkkkkkkkkk', 'kyyyyyyyyyyyyyyk', 'kyyyyyyyyyyyyyyk', 'kyyyyyyyyyyyyyyk', 'kYYYYYYYYYYYYYYk', 'kkkkkkkkkkkkkkkk', ...barPlate('r', 'R'), '................', '................', '................'];
 SPR.blank = Array(16).fill('................');
@@ -710,12 +820,12 @@ let BLANK_TINT = '#ffe0ea';
 const SPRITE_CACHE = {};
 function spriteCanvas(id, dim) {
   const key = id + (dim ? ':d' : ''); if (SPRITE_CACHE[key]) return SPRITE_CACHE[key];
-  const rows = SPR[id], c = document.createElement('canvas'); c.width = c.height = 16; const x = c.getContext('2d');
-  let x0 = 16, y0 = 16, x1 = -1, y1 = -1;
+  const rows = SPR[id], c = document.createElement('canvas'); let N; N = rows.length; c.width = c.height = N; const x = c.getContext('2d');
+  let x0 = N, y0 = N, x1 = -1, y1 = -1;
   rows.forEach((row, y) => [...row].forEach((ch, xx) => { if (ch !== '.') { x0 = Math.min(x0, xx); x1 = Math.max(x1, xx); y0 = Math.min(y0, y); y1 = Math.max(y1, y); } }));
-  const ox = Math.floor((16 - (x1 - x0 + 1)) / 2) - x0, oy = Math.floor((16 - (y1 - y0 + 1)) / 2) - y0; // center by bounding box
+  const ox = Math.floor((N - (x1 - x0 + 1)) / 2) - x0, oy = Math.floor((N - (y1 - y0 + 1)) / 2) - y0; // center by bounding box
   rows.forEach((row, y) => [...row].forEach((ch, xx) => { if (ch === '.') return; let col = PAL[ch] || '#f0f'; x.fillStyle = col; x.fillRect(xx + ox, y + oy, 1, 1); }));
-  if (dim) { x.globalCompositeOperation = 'source-atop'; x.fillStyle = 'rgba(40,30,70,.62)'; x.fillRect(0, 0, 16, 16); }
+  if (dim) { x.globalCompositeOperation = 'source-atop'; x.fillStyle = 'rgba(40,30,70,.62)'; x.fillRect(0, 0, N, N); }
   return (SPRITE_CACHE[key] = c);
 }
 function drawSprite(ctx, id, cx, cy, size, { dim = false, stretch = 1, alpha = 1 } = {}) {
@@ -933,7 +1043,7 @@ function reelPos(R, now) { // strip position of a spinning column (0 = final sym
   if (t < R.dEnd) return R.P0 - R.V * t;
   const u = Math.min(1, (t - R.dEnd) / R.dDec); return 3 * (1 - (R.lin ? u : easeBack(u, 1.4)));
 }
-const THEMES = { none: { g0: '#132a5c', g1: '#0b1638', frame: '#1fc8b4', acc: '#1fc8b4' }, cherry: { g0: '#5c0f30', g1: '#2a0416', frame: '#ff8aa8', acc: '#ff2d55', blank: '#ff9cc0' }, bell: { g0: '#5a3d00', g1: '#241600', frame: '#ffe27a', acc: '#ffc61a', blank: '#fff1b8' }, bar: { g0: '#0c2f80', g1: '#030c2c', frame: '#7fd0ff', acc: '#2f9bff', blank: '#8ec8ff' } };
+const THEMES = { none: { g0: '#132a5c', g1: '#0b1638', frame: '#1fc8b4', acc: '#1fc8b4' }, cherry: { g0: '#5c0f30', g1: '#2a0416', frame: '#ff8aa8', acc: '#ff2d55', blank: '#fe86fe' }, bell: { g0: '#5a3d00', g1: '#241600', frame: '#ffe27a', acc: '#ffc61a', blank: '#fff1b8' }, bar: { g0: '#0c2f80', g1: '#030c2c', frame: '#7fd0ff', acc: '#2f9bff', blank: '#8ec8ff' } };
 function winBg(ctx, x, y) { const g = ctx.createLinearGradient(x, y, x, y + 24); g.addColorStop(0, '#d9ccb0'); g.addColorStop(.18, '#fffaf0'); g.addColorStop(.82, '#fff6e2'); g.addColorStop(1, '#cdbd98'); ctx.fillStyle = g; rrect(ctx, x, y, 24, 24, 2.5); ctx.fill(); }
 function bolt(ctx, a, b, seed, amp) { const r = mulberry(seed), n = 7; ctx.beginPath(); ctx.moveTo(a.x, a.y); for (let i = 1; i < n; i++) { const t = i / n; ctx.lineTo(a.x + (b.x - a.x) * t + (r() - .5) * amp, a.y + (b.y - a.y) * t + (r() - .5) * amp); } ctx.lineTo(b.x, b.y); }
 function drawAnim(ctx, A, now, grid) {
@@ -963,7 +1073,7 @@ function renderBoard(ctx, px, V) {
     ctx.fillStyle = '#05303a'; rrect(ctx, x - 1.6, y - 1.6 + .8, 27.2, 27.2, 4); ctx.fill();
     const stk = V.sticky && V.sticky.has(id); if (stk) { ctx.save(); ctx.shadowColor = TH.acc; ctx.shadowBlur = 5 + 3 * Math.sin(now / 150); } ctx.fillStyle = V.held && V.held[c] ? '#ffd23f' : stk ? TH.acc : TH.frame; rrect(ctx, x - 1.6, y - 1.6, 27.2, 27.2, 4); ctx.fill(); if (stk) ctx.restore();
     ctx.fillStyle = 'rgba(255,255,255,.45)'; ctx.fillRect(x + .5, y - 1.2, 23, .6);
-    winBg(ctx, x, y);
+    if (V.theme === 'cherry') { ctx.fillStyle = '#fe86fe'; rrect(ctx, x, y, 24, 24, 2.5); ctx.fill(); } else winBg(ctx, x, y);
     const li = lineOf.get(id), inDraw = drawCells.includes(id);
     if (li !== undefined || inDraw) { const L = li !== undefined ? V.lines[li] : null, col = L ? infoOf(L.cls) : V.drawing.col, fl = L && V.flash && V.flash.has(li) ? .5 + .5 * Math.sin(now / 60) : 0;
       const rg = ctx.createRadialGradient(x + 12, y + 12, 2, x + 12, y + 12, 17); rg.addColorStop(0, col.light); rg.addColorStop(1, col.col); ctx.globalAlpha = .5 + fl * .5; ctx.fillStyle = rg; rrect(ctx, x, y, 24, 24, 2.5); ctx.fill(); ctx.globalAlpha = 1; }
@@ -1051,7 +1161,7 @@ function makeReels(prev, next, holds, now, anticipCol, ts, rng, fill) {
   return reels;
 }
 const spinningAny = R => !!(R && R.some(x => x && x.spinning));
-function hotCount(g, cols) { let n = 0; for (const c of cols) for (let r = 0; r < 3; r++) if (g[r][c] === 'seven' || g[r][c] === 'wild') n++; return n; }
+function hotCount(g, cols) { let n = 0; for (const c of cols) for (let r = 0; r < 3; r++) if (g[r][c] === 'seven' || g[r][c] === 'seven3' || g[r][c] === 'wild') n++; return n; }
 function doSpin() {
   if (G.phase !== 'idle' || G.screen !== 'game') return;
   Sfx.unlock();
@@ -1289,11 +1399,11 @@ function afterRound() {
 }
 const BONUS_INFO = {
   cherry: { icon: 'cherry', sub: 'ONE SPIN ON THE 7s REELS · COUNT THE 7s', short: 'One spin on pink reels packed with 7s — every 7 on screen counts!',
-    rules: ['Starts <b>automatically</b> when 3 cherries land on a row, column or diagonal — or when the cherry meter is full.', '<b>One spin</b> on special pink reels: blanks, RED 7s, BARs and cherries.', `7s pay <b>anywhere</b>: ${SEVENS_PAY.map((v, i) => v ? `${i}×7 = ${v}×` : '').filter(Boolean).join(' · ')} your stake (IQ Wild counts as a 7).`, 'Then draw any lines as usual. All 9 blank pays ' + BLANK_ALL + '× stake.'] },
+    rules: ['Starts <b>automatically</b> when 3 cherries land on a row, column or diagonal — or when the cherry meter is full.', '<i>CHERRY BONUS — LAST 12 TIMES OF 🍒🍒 OR 1× 🍒🍒🍒 · MIN. BET 8 FOR ANY BONUS</i>', '<b>One spin</b> on special pink reels with few blanks: <b>TRIPLE 7s</b> (each counts as a RED 7), cherries and 1-, 2- and 3-BARs.', `7s pay <b>anywhere</b>: ${SEVENS_PAY.map((v, i) => v ? `${i}×7 = ${v}×` : '').filter(Boolean).join(' · ')} your stake (IQ Wild counts as a 7).`, 'Then draw any lines as usual. All 9 blank pays ' + BLANK_ALL + '× stake.'] },
   bell: { icon: 'bell', sub: `TAKE THE POOL + ${BONUS.bell.spins} FREE GAMES`, short: 'You take the POOL, then every bell pays on its own!',
-    rules: [`Starts by paying you the <b>POOL</b> — it grows every time a RED 7 lands in the centre cell (+${POOL_ADD.seven}, IQ Wild +${POOL_ADD.wild}, × bet level).`, `Then <b>${BONUS.bell.spins} free games</b> on special reels with blanks, bells, BARs and 7s.`, `Every bell on screen pays <b>${BONUS.bell.single}</b> (× bet level) — and bell lines pay as usual.`, 'All 9 blank pays ' + BLANK_ALL + '× stake.'] },
+    rules: ['<i>BELL BONUS AND POOL — TAKE LAST 7 TIMES OF 🔔🔔🔔</i>', `Starts by paying you the <b>POOL</b> — it grows every time a RED 7 lands in the centre cell (+${POOL_ADD.seven}, IQ Wild +${POOL_ADD.wild}, × bet level).`, `Then <b>${BONUS.bell.spins} free games</b> on special reels with blanks, bells, BARs and 7s.`, `Every bell on screen pays <b>${BONUS.bell.single}</b> (× bet level) — and bell lines pay as usual.`, 'All 9 blank pays ' + BLANK_ALL + '× stake.'] },
   bar: { icon: 'superbar', sub: `${BONUS.bar.spins} FREE GAMES · SUPER BARs`, short: 'SUPER BARs pay double the Double BAR!',
-    rules: ['Starts <b>automatically</b> when 3 single BARs land on a row, column or diagonal (IQ Wild may stand in).', `<b>${BONUS.bar.spins} free games</b> on special reels with blanks, BARs and <b>SUPER BARs</b>.`, `SUPER BAR lines pay ${SYMBOLS.superbar.pay.join(' / ')} (×2–×5) and mix with other BARs; each SUPER BAR on screen also pays ${BONUS.bar.single}.`, 'All 9 blank pays ' + BLANK_ALL + '× stake.'] },
+    rules: ['<i>1 BAR BONUS — 1× B1R B1R B1R</i>', 'Starts <b>automatically</b> when 3 single BARs land on a row, column or diagonal (IQ Wild may stand in).', `<b>${BONUS.bar.spins} free games</b> on special reels with blanks, BARs and <b>SUPER BARs</b>.`, `SUPER BAR lines pay ${SYMBOLS.superbar.pay.join(' / ')} (×2–×5) and mix with other BARs; each SUPER BAR on screen also pays ${BONUS.bar.single}.`, 'All 9 blank pays ' + BLANK_ALL + '× stake.'] },
 };
 function startBonus(mode) {
   const inst = mode.endsWith('*'); mode = mode.replace('*', ''); const i = BONUS_IDS.indexOf(mode); if (!inst) save.meters[mode] = Math.max(0, save.meters[mode] - cond()[i]); save.bonusCount[mode] = (save.bonusCount[mode] || 0) + 1; persist();
@@ -1515,7 +1625,7 @@ function demoTick(now) {
 function spriteImg(id) { const c = document.createElement('canvas'); c.width = c.height = 16; const x = c.getContext('2d'); x.imageSmoothingEnabled = false; drawSprite(x, id, 8, 8, 16); return c; }
 function buildPaytable() {
   const P = $('ptGrid'), lv = betLevel(); P.innerHTML = '<span class="h"></span><span class="h">×2</span><span class="h">×3</span><span class="h">×4</span><span class="h">×5+</span>';
-  const rows = [['seven'], ['wild'], ['bar2'], ['bar'], ['anybar'], ['bell'], ['melon'], ['cherry', 'orange', 'plum']];
+  const rows = [['seven', 'seven3'], ['wild'], ['bar3'], ['bar2'], ['bar'], ['anybar'], ['bell'], ['melon'], ['cherry', 'orange', 'plum']];
   P.dataset.af = 1;
   for (const r of rows) { const cell = document.createElement('span'); cell.style.display = 'flex'; cell.style.gap = '2px'; (r[0] === 'anybar' ? ['bar', 'bar2'] : r).forEach(id => cell.appendChild(spriteImg(id))); P.appendChild(cell); const pay = r[0] === 'anybar' ? ANYBAR.pay : SYMBOLS[r[0]].pay; pay.forEach(v => { const s = document.createElement('span'); s.textContent = v * lv; P.appendChild(s); }); }
   { const cell = document.createElement('span'); cell.style.display = 'flex'; cell.style.gap = '1px'; FRUITS.forEach(id => { const im = spriteImg(id); im.style.width = im.style.height = '13px'; cell.appendChild(im); }); P.appendChild(cell); const s = document.createElement('span'); s.style.gridColumn = 'span 4'; s.style.fontWeight = '700'; s.style.color = '#c2185b'; s.textContent = `ALL FRUITS (9 fruits, 4 kinds) = ${afAmount()}${save.op.af === 'prog' ? ' POT' : ''}`; P.appendChild(s); }
@@ -1574,7 +1684,7 @@ document.querySelectorAll('.tbm').forEach(el => { const c = el.querySelector('ca
 layout(); hud(); requestAnimationFrame(frame);
 // ---------- test hooks ----------
 window.__iq = {
-  marker: 'CHERRY_LINES_v4_2', stopReel, stopNext, stopAll, canStop, isAllFruits, afAmount, ALLFRUIT, G, save, demo, NODES, SYMBOLS, solveBoard, anyLineLeft, payOf, classOf,
+  marker: 'CHERRY_LINES_v4_3', stopReel, stopNext, stopAll, canStop, isAllFruits, afAmount, ALLFRUIT, G, save, demo, NODES, SYMBOLS, solveBoard, anyLineLeft, payOf, classOf,
   seed(n) { G.rng = mulberry(n); }, trigger(mode) { if (G.phase !== 'idle' || G.bonus) return false; G.queue.push(mode); afterRound(); return true; }, forceCard(c) { G.forcedCard = c; }, setOp(o) { Object.assign(save.op, o); persist(); hud(); }, curPayFn, cond, BONUS, CONDITIONS, force(grid) { G.forced = grid; }, fast(v) { TS = v; },
   boardClient(x, y) { return boardToScreen({ x, y }); }, pathPoints, mult, betLevel, jackpotNow,
   state() { return { pool: save.pool, phase: G.phase, credits: save.credits, win: G.win, lines: G.lines.map(L => ({ cells: L.cells, cls: L.cls, base: L.base })), burnt: [...G.burnt], grid: G.grid, canHold: G.canHold, holds: G.holds, meters: { ...save.meters }, bonus: G.bonus && { mode: G.bonus.mode, spin: G.bonus.spin, spins: G.bonus.spins, total: G.bonus.total, sticky: [...G.bonus.sticky] }, queue: G.queue.slice(), op: { ...save.op }, natural: G.natural, jp: jackpotNow(), bet: betLevel(), gam: G.gam && { amt: G.gam.amt, steps: G.gam.steps, last: G.gam.last, hist: G.gam.hist.slice(), busy: G.gam.busy } }; },
