@@ -1,4 +1,4 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"><meta http-equiv="Pragma" content="no-cache"><meta http-equiv="Expires" content="0"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <title>CHERRY CLASSIC '91 — a tribute to the 1991 Dyna classic</title>
 <meta name="description" content="CHERRY CLASSIC '91: a free fun-credit tribute to the 1991 Dyna nine-window fruit machine. 8 lines, Cherry / Bell / 1 Bar bonus, double up. No real money.">
 <style>
@@ -38,13 +38,15 @@ html,body{margin:0;height:100%;background:#000;color:#fff;font-family:"Courier N
 <div id="svc"><h2>SERVICE MODE · DIP SWITCHES</h2><div id="svRows"></div>
 <button class="svb" id="svMeters">RESET METERS</button><button class="svb" id="svCred">RESET CREDITS</button><button class="svb" id="svExit">EXIT</button><div id="svNote"></div></div>
 <script>
+const CC_BUILD = '20261014011938';
 // ======================= MONETIZATION CONFIG — edit these (see MONETIZATION_TODO.md) =======================
 const BMC_URL = 'https://buymeacoffee.com/YOUR_PAGE';      // your Buy Me a Coffee page (or the "Remove ads" shop item)
 const UNLOCK_CODE = 'CHANGE-ME-91';                         // BMC shop item redirect = <this page>?thanks=CHANGE-ME-91 (works on any domain)
 const AD_PROVIDER = 'self';                                 // 'self' = own Buy-Me-a-Coffee promo cards (default, no trackers) | 'none' | 'test' | 'adsense' | 'crazygames' (dormant hooks)
 const INTERSTITIAL_MIN_GAP_MS = 10 * 60 * 1000;             // at most one interstitial per 10 min, only between sessions/rounds
 const REWARD_CREDITS = 500, FREE_REFILL = 500;              // refill is always free (+500)
-const COFFEE_SKIP_SECS = 3;                                 // CONTINUE unlocks after this countdown
+const COFFEE_SKIP_SECS = 3;
+const COFFEE_FIRST_MS = 5 * 60 * 1000, COFFEE_FIRST_SPINS = 40;  // first coffee break of a session: after ~5 min or ~40 spins                                 // CONTINUE unlocks after this countdown
 // ===========================================================================================================
 // domain-agnostic: the thank-you URL is built from wherever the game is served (github.io today, own domain later)
 const THANKS_URL = () => location.origin + location.pathname + '?thanks=' + encodeURIComponent(UNLOCK_CODE);
@@ -149,8 +151,8 @@ function evalGrid(grid, lb, mode = 'main') { // -> { wins:[{line,kind,mult,pay,c
   if (mode === 'main' && flat.every(s => FRUITS.includes(s))) { out.allFruit = ALL_FRUIT_X * B; out.extra += out.allFruit; }
   if (mode === 'cherry') { out.sevensPay = SEVENS_PAY[out.sevens] * B; out.extra += out.sevensPay; }
   if (mode === 'bell') { out.bellPay = Math.max(1, Math.round(out.bells * BELL_SINGLE * B / 8)) * (out.bells ? 1 : 0); out.extra += out.bellPay; }
-  out.cherryPairs = wins.filter(w => w.kind === 'cherry2').length; out.cherry3 = wins.some(w => w.kind === 'cherry3');
-  out.bellLines = wins.filter(w => w.kind === 'bell').length; out.bar1 = wins.some(w => w.kind === 'bar');
+  out.cherryPairs = wins.filter(w => w.kind === 'cherry2').length; out.cherry3 = wins.filter(w => w.kind === 'cherry3').length;
+  out.bellLines = wins.filter(w => w.kind === 'bell').length; out.bar1 = wins.filter(w => w.kind === 'bar').length;
   out.centerSeven = isSeven(grid[1][1]); out.sum = total + out.extra; return out;
 }
 function mainSpin(r, op, lb) { // payout-controlled main game result
@@ -161,10 +163,10 @@ function mainSpin(r, op, lb) { // payout-controlled main game result
 // meters: returns list of bonuses earned this game (bet must reach the bonus min. bet)
 function applyMeters(st, ev, op) {
   const out = []; if (ev.B < op.minBet) return out; const cond = CONDITIONS[op.cond];
-  if (ev.cherry3) out.push('cherry');
+  for (let i = 0; i < ev.cherry3; i++) out.push('cherry'); // each 3-cherry line is its own Cherry Bonus (stacked)
   st.meters.cherry += ev.cherryPairs; if (st.meters.cherry >= cond[0]) { st.meters.cherry = 0; out.push('cherry'); }
   st.meters.bell += ev.bellLines; if (st.meters.bell >= cond[1]) { st.meters.bell = 0; out.push('bell'); }
-  if (ev.bar1) out.push('bar');
+  for (let i = 0; i < ev.bar1; i++) out.push('bar'); // each 1-BAR line = its own 7 free games
   if (ev.centerSeven) st.pool += Math.max(1, Math.round(ev.B / 2));
   return out;
 }
@@ -509,7 +511,7 @@ const Sfx = {
 const $ = id => document.getElementById(id);
 const SAVE_KEY = 'cherryclassic91.v1';
 const OP_DEFAULT = { rate: 85, dup: true, seven: 'loss', dupRate: 90, cond: '12-7-1', minBet: 16, maxBet: 64, speed: 'normal', skillStop: true };
-let save = { credits: 100, bet: 8, meters: { cherry: 0, bell: 0 }, pool: 0, hist: [], op: { ...OP_DEFAULT }, sound: true, games: 0 };
+let save = { credits: 100, bet: 16, meters: { cherry: 0, bell: 0 }, pool: 0, hist: [], op: { ...OP_DEFAULT }, sound: true, games: 0 };
 try { const s = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null'); if (s) { save = Object.assign({}, save, s); save.op = Object.assign({}, OP_DEFAULT, s.op); save.meters = Object.assign({ cherry: 0, bell: 0 }, s.meters); } } catch (e) {}
 function persist() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch (e) {} }
 let TS = 1; // test time scale
@@ -523,7 +525,7 @@ const BG = { main: '#d6d2f6', cherry: '#fe86fe', bell: '#ffe680', bar: '#8ec8ff'
 function decelFrac(u) { return 4 * (.5 * Math.min(u, .25) + .25 * clamp(u - .25, 0, .25) + .125 * clamp(u - .5, 0, .5)); }
 function travel(W, t) { const tau = t - W.delay; if (tau <= 0) return 0; if (tau < MOTION.Ta) return MOTION.v * tau * tau / (2 * MOTION.Ta); let d = MOTION.v * (Math.min(t, W.tD) - W.delay - MOTION.Ta / 2); const Td = W.Td || MOTION.Td; if (t > W.tD) d += MOTION.v * Td * MOTION.k * decelFrac(Math.min(1, (t - W.tD) / Td)); return d; }
 function wPos(W, now) { if (!W.spinning) return W.L; const t = (now - W.t0) / 1000 * TS; return t >= W.tD + (W.Td || MOTION.Td) ? W.L : W.P0 - travel(W, t); }
-const G = { phase: 'idle', grid: null, wins: [], win: 0, ev: null, mode: 'main', bonus: null, queue: [], wup: null, msg: '', msgT: 0, forced: null, forcedCard: null, rng: mulberry(Date.now() % 1e9), vis: mulberry(12345), W: [], blink: 0, stopLog: [], spinT0: 0 };
+const G = { phase: 'idle', grid: null, wins: [], win: 0, ev: null, mode: 'main', bonus: null, queue: [], wup: null, msg: '', msgT: 0, forced: null, forcedCard: null, rng: mulberry(Date.now() % 1e9), vis: mulberry(12345), W: [], blink: 0, stopLog: [], spinT0: 0, sess: { t0: Date.now(), spins: 0 }, missed: false };
 // initial windows
 for (let i = 0; i < 9; i++) { const st = {}; for (let k = -1; k <= 1; k++) st[k] = pick(G.vis, REELS.main); G.W.push({ strip: st, L: 0, spinning: false }); }
 G.grid = [0, 1, 2].map(r => [0, 1, 2].map(c => G.W[r * 3 + c].strip[0]));
@@ -544,7 +546,7 @@ function drawPanel(now) {
   txt('LAST', 6, 39, 7, '#fff'); box(25, 38, 14, 9, '#ffe75a'); txt(String(cond[0] - save.meters.cherry), 32, 39, 7.5, '#000', 'center'); txt('TIMES', 41, 39, 7, '#fff');
   txt('OF', 6, 50, 7, '#fff'); mini('cherry', 22, 53); mini('cherry', 32, 53); txt('-', 42, 49, 7, '#e8304a');
   txt('OR', 6, 60, 6.5, '#fff'); txt('1X', 6, 68, 7, '#fff'); mini('cherry', 24, 71); mini('cherry', 34, 71); mini('cherry', 44, 71);
-  txt('MIN. BET', 6, 80, 7, '#fff'); txt(String(op.minBet), 50, 80, 7.5, '#ff4040'); txt('FOR ANY BONUS', 4, 89, 6.2, '#fff');
+  txt('MIN. BET', 6, 80, 7, '#fff'); const lowB = !G.bonus && save.bet < op.minBet; txt(String(op.minBet), 50, 80, 7.5, lowB ? (fl ? '#ff2020' : '#401010') : '#ff4040'); if (lowB) txt('MIN. BET', 6, 80, 7, fl ? '#ff2020' : '#fff'); txt('FOR ANY BONUS', 4, 89, 6.2, '#fff');
   frame(4, 99, 62, 44, '#c8c8c8', '#444'); box(4, 99, 62, 44, '#000');
   box(5, 100, 60, 10, bm === 'bell' && fl ? '#fff' : '#ffd21a'); txt('Bell  Bonus', 35, 101, 7.5, '#000', 'center');
   txt('AND POOL TAKE', 35, 112, 6, '#ffe75a', 'center'); txt('LAST', 6, 121, 7, '#fff'); box(25, 120, 14, 9, '#ffe75a'); txt(String(cond[1] - save.meters.bell), 32, 121, 7.5, '#000', 'center'); txt('TIMES', 41, 121, 7, '#fff');
@@ -607,7 +609,7 @@ function drawBottom(now) {
   txt('POOL', 236, 196, 9, '#8ec8ff'); txt(String(save.pool), 268, 208, 14, '#8ec8ff', 'right');
   txt('BET', 290, 196, 9, '#ff3030'); txt(String(save.bet).padStart(2, '0'), 314, 208, 14, '#ff3030', 'right');
   let m = G.msg; if (G.msgT && now > G.msgT) { G.msg = ''; G.msgT = 0; m = ''; }
-  if (!m) m = G.phase === 'spin' ? '' : save.credits < 1 && !G.bonus ? (Math.floor(now / 600) % 2 ? 'INSERT COIN' : '') : G.bonus ? `${{ cherry: 'CHERRY', bell: 'BELL', bar: '1 BAR' }[G.bonus.mode]} BONUS` : 'PRESS START';
+  if (!m) m = G.phase === 'spin' ? '' : save.credits < 1 && !G.bonus ? (Math.floor(now / 600) % 2 ? 'INSERT COIN' : '') : G.bonus ? `${{ cherry: 'CHERRY', bell: 'BELL', bar: '1 BAR' }[G.bonus.mode]} BONUS${G.bonus.tag || ''}` : 'PRESS START';
   txt(m, 160, 206, 12, '#fff', 'center');
   if (G.win && (G.phase === 'collect' || G.phase === 'count')) txt(`WIN ${G.win}`, 160, 222, 9, '#ffe75a', 'center');
   if (G.bonus) txt(G.bonus.mode === 'cherry' ? 'CHERRY BONUS GAME' : `FREE GAME ${Math.min(FREE_GAMES, G.bonus.done + (G.phase === 'spin' ? 1 : 0))}/${FREE_GAMES} · ${G.bonus.total}`, 160, 231, 6.5, '#ffd21a', 'center');
@@ -656,29 +658,40 @@ function update(now) {
 }
 function settle() {
   const ev = G.ev, B = G.bonus; G.wins = ev.wins; G.win = ev.sum;
-  if (!B) { const q = applyMeters(save, ev, save.op); G.queue.push(...q); }
+  if (!B) { const q = applyMeters(save, ev, save.op); G.queue.push(...q); G.seq = {}; q.forEach(m => G.seq[m] = { n: 0, of: q.filter(x => x === m).length }); G.sess.spins++;
+    if (ev.B < save.op.minBet && (ev.cherry3 || ev.bar1)) { G.missed = true; Sfx.lose(); } else G.missed = false; }
   else { B.done++; B.total += ev.sum; }
   persist();
   if (G.win > 0) { Sfx.win(G.win); const parts = []; if (ev.allFruit) parts.push(`ALL FRUIT ${ev.allFruit}`); if (ev.sevensPay) parts.push(`${ev.sevens} SEVENS ${ev.sevensPay}`); if (ev.bellPay) parts.push(`${ev.bells} BELLS ${ev.bellPay}`);
     if (B || !save.op.dup) { G.phase = 'collect'; msg(parts[0] || `WIN ${G.win}`); ui(); setTimeout(() => take(), 1400 / TS); }
-    else { G.phase = 'collect'; msg(parts[0] || 'TAKE OR D-UP'); ui(); } }
+    else { G.phase = 'collect'; msg(parts[0] || 'TAKE OR D-UP'); ui(); }
+    if (G.missed) missHint(parts[0] || (B || !save.op.dup ? `WIN ${G.win}` : 'TAKE OR D-UP')); }
   else { if (B && B.mode === 'cherry') msg('NO SEVENS', 1200); afterRound(); }
+}
+function missHint(back) { // a bonus trigger landed but bet < MIN. BET: say so, then restore the normal message
+  const t = `BONUS NEEDS BET ${save.op.minBet}`; msg(t); ui(); setTimeout(() => { if (G.msg === t) { msg(back); ui(); } }, 2200 / TS);
 }
 function take() {
   if (G.phase !== 'collect') return; const amt = G.win; G.phase = 'count'; ui(); let left = amt; const step = Math.max(1, Math.ceil(amt / 25));
   const iv = setInterval(() => { const d = Math.min(step, left); left -= d; save.credits += d; Sfx.count(); if (left <= 0) { clearInterval(iv); G.win = 0; persist(); afterRound(); } }, 30 / TS);
 }
+function maybeCoffee() { // first card after ~5 min or ~40 spins of play, then every ~10 min; only when idle (not spin/bonus/W-UP)
+  if (!Ads.enabled() || !Ads.safeNow() || G.queue.length) return false;
+  if (!(G.sess.spins >= COFFEE_FIRST_SPINS || Date.now() - G.sess.t0 >= COFFEE_FIRST_MS)) return false;
+  return Ads.showInterstitial('play');
+}
 function afterRound() {
   G.phase = 'idle'; const B = G.bonus; setTimeout(checkRefill, 600 / TS);
-  if (B) { if (B.done < B.games) { msg(B.mode === 'cherry' ? 'PRESS START' : `FREE GAME ${B.done + 1}/${FREE_GAMES} · START`); ui(); return; }
+  if (B) { if (B.done < B.games) { msg(B.mode === 'cherry' ? `CHERRY BONUS${B.tag} · START` : `FREE GAME ${B.done + 1}/${FREE_GAMES}${B.tag ? ' · BONUS' + B.tag : ''} · START`); ui(); return; }
     msg(`BONUS TOTAL ${B.total}`, 2500); G.bonus = null; G.mode = 'main'; }
   if (G.queue.length) { const m = G.queue.shift(); startBonus(m); return; }
-  if (!G.msg) msg(''); ui();
+  if (!G.msg) msg(''); ui(); setTimeout(maybeCoffee, 900 / TS);
 }
 function startBonus(mode) {
-  G.bonus = { mode, games: mode === 'cherry' ? 1 : FREE_GAMES, done: 0, total: 0 }; G.mode = mode; Sfx.bonus();
+  const sq = (G.seq || {})[mode], tag = sq && sq.of > 1 ? ` ${++sq.n}/${sq.of}` : '';
+  G.bonus = { mode, games: mode === 'cherry' ? 1 : FREE_GAMES, done: 0, total: 0, tag }; G.mode = mode; Sfx.bonus();
   if (mode === 'bell') { const p = save.pool; save.pool = 0; save.credits += p; G.bonus.total += p; msg(`POOL TAKE ${p}`, 2500); }
-  else msg(mode === 'cherry' ? 'CHERRY BONUS!' : '1 BAR BONUS!', 2500);
+  else msg(mode === 'cherry' ? `CHERRY BONUS${tag}!` : `1 BAR BONUS${tag}!`, 2500);
   G.phase = 'idle'; persist(); ui();
 }
 // ---------- W-UP ----------
@@ -695,7 +708,7 @@ function wupGuess(g) {
 function wupTake() { const U = G.wup; if (G.phase !== 'wup' || U.stage !== 'result') return; G.win = U.amt; G.wup = null; G.phase = 'collect'; G.wins = []; take(); }
 function wupAgain() { const U = G.wup; if (G.phase !== 'wup' || U.stage !== 'result') return; U.stage = 'guess'; U.card = null; msg('BIG OR SMALL ?'); Sfx.flip(); ui(); }
 // ---------- buttons ----------
-function betUp() { if (G.phase !== 'idle' || G.bonus) return; Sfx.unlock(); let b = save.bet + 1; if (b > save.op.maxBet || b > Math.max(1, save.credits)) b = 1; save.bet = b; Sfx.bet(); persist(); ui(); }
+function betUp() { if (G.phase !== 'idle' || G.bonus) return; Sfx.unlock(); let b = save.bet < 8 ? save.bet + 1 : save.bet + 8; if (b > save.op.maxBet || b > Math.max(1, save.credits)) b = 1; save.bet = b; Sfx.bet(); persist(); ui(); }
 function coin() { Sfx.unlock(); if (save.credits < 1 && G.phase === 'idle' && !G.bonus) { refillOffer(); return; } save.credits = Math.min(999999, save.credits + 100); Sfx.coin(); persist(); msg('FUN CREDITS +100', 1200); ui(); }
 const ACT = {
   b1: () => G.phase === 'spin' ? stopCol(0) : G.phase === 'collect' ? take() : G.phase === 'wup' ? wupTake() : 0,
@@ -762,7 +775,16 @@ addEventListener('resize', layout); layout();
 let FREEZE = null;
 function loop(now) { requestAnimationFrame(loop); if (FREEZE != null) now = FREEZE; update(now); render(now); }
 requestAnimationFrame(loop); ui(); tipLabel(); firstRun();
-window.__cc = { marker: CC_MARKER, Ads, Mon, checkRefill, adMode: AD_MODE, G, save: () => save, force(g) { G.forced = g; }, forceCard(c) { G.forcedCard = c; }, setOp(o) { Object.assign(save.op, o); persist(); ui(); }, fast(v) { TS = v; }, freeze(v) { FREEZE = v; },
+// cache-busting: Safari may keep an old copy; check the live build id and reload once if newer
+(function freshCheck() {
+  if (location.protocol === 'file:' || location.search.includes('thanks=')) return;
+  fetch(location.pathname + '?cb=' + Date.now(), { cache: 'no-store' }).then(r => r.text()).then(t => {
+    const m = t.match(/CC_BUILD = '(\d+)'/); if (!m || m[1] === CC_BUILD) return;
+    if (sessionStorage.getItem('cc.reloaded') === m[1]) return; sessionStorage.setItem('cc.reloaded', m[1]);
+    location.replace(location.pathname + '?v=' + m[1]);
+  }).catch(() => {});
+})();
+window.__cc = { marker: CC_MARKER, build: CC_BUILD, maybeCoffee, missHint, Ads, Mon, checkRefill, adMode: AD_MODE, G, save: () => save, force(g) { G.forced = g; }, forceCard(c) { G.forcedCard = c; }, setOp(o) { Object.assign(save.op, o); persist(); ui(); }, fast(v) { TS = v; }, freeze(v) { FREEZE = v; },
   trigger(m) { if (G.phase !== 'idle' || G.bonus) return false; startBonus(m); return true; }, evalGrid, lineResult, lineBets, LINES, MOTION, wPos, travel, ORDER, SPEED, stopCol, stopAll, take, wupStart, wupGuess,
   state: () => ({ phase: G.phase, credits: save.credits, bet: save.bet, win: G.win, wins: G.wins.map(w => ({ line: w.line + 1, kind: w.kind, pay: w.pay })), grid: G.grid, bonus: G.bonus && { ...G.bonus }, queue: G.queue.slice(), meters: { ...save.meters }, pool: save.pool, wup: G.wup && { amt: G.wup.amt, stage: G.wup.stage, res: G.wup.res }, msg: G.msg, stopLog: G.stopLog.slice(), hist: save.hist.slice() }) };
 
