@@ -327,7 +327,7 @@ body[class*=bm-] .cab .bulbs i{animation:chase3 .5s steps(1) infinite}
 <canvas id="fx"></canvas>
 <div id="crt"></div>
 <script>
-// ======================= IQ Cherry Lines – rules, reels, routing & solver (CHERRY_LINES_v4_3 · Cherry Master-style bonuses + all fruits + skill stop) =======================
+// ======================= IQ Cherry Lines – rules, reels, routing & solver (CHERRY_LINES_v4_4 · Cherry Master-style bonuses + all fruits + skill stop) =======================
 // Board: 100x100 units. 3x3 reel windows separated by gutters. Lines live on a graph:
 //   9 cell nodes, 16 lattice (gutter crossing) nodes, 24 gutter segment nodes.
 // A line visits matching cells and travels through gutters. Every node can carry ONE line:
@@ -922,6 +922,19 @@ const OP_DEFAULT = { cond: '12-7-1', minBet: 8, wup: true, seven: 'loss', payout
 let save = { credits: START_CREDITS, jpBase: JP_BASE, meters: { cherry: 0, bell: 0, bar: 0 }, betIx: 0, muted: false, music: true, crt: false, timer: true, best: 0, spins: 0, refills: 0, seen: {}, op: { ...OP_DEFAULT }, bonusCount: { cherry: 0, bell: 0, bar: 0 }, afPot: ALLFRUIT.base, afHits: 0, pool: 0, wupHist: [] };
 try { const s = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null'); if (s) { const d = save; save = Object.assign({}, d, s); save.meters = Object.assign({}, d.meters, s.meters); save.op = Object.assign({}, d.op, s.op); save.seen = Object.assign({}, s.seen); save.bonusCount = Object.assign({}, d.bonusCount, s.bonusCount); delete save.meter; if (!CONDITIONS[save.op.cond]) save.op.cond = OP_DEFAULT.cond; save.afPot = clamp(+save.afPot || ALLFRUIT.base, ALLFRUIT.base, ALLFRUIT.max); } } catch (e) {}
 function persist() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch (e) {} }
+// CLASSIC reel motion (Martin's spec). One model: velocity profile integrated to position —
+// linear accel ramp 0→cruise, constant cruise, easeOutCubic decel whose start velocity (3·D/T) equals cruise (D = v·T/3),
+// so the path is velocity-continuous, monotonic, overshoot 0 and lands exactly on the grid. Stops are sequential.
+const REEL_MOTION_DEFAULT = Object.freeze({ baseSpinMs: 900, accelerationMs: 80, cruiseSpeed: 18, decelerationMs: 220, stopStaggerMs: 250, accelerationEasing: 'linear', decelerationEasing: 'easeOutCubic', overshoot: 0, bounce: false, snapToGrid: true, visualFrameRate: 30 });
+const REEL_MOTION = { ...REEL_MOTION_DEFAULT, ...(save.reelTune || {}) };
+function setReelMotion(o) { if (o === null) { Object.assign(REEL_MOTION, REEL_MOTION_DEFAULT); delete save.reelTune; } else { Object.assign(REEL_MOTION, o); save.reelTune = {}; for (const k in REEL_MOTION) if (REEL_MOTION[k] !== REEL_MOTION_DEFAULT[k]) save.reelTune[k] = REEL_MOTION[k]; } persist(); }
+function cmTravel(R, t) { // symbols travelled at t seconds (scaled) after spin start
+  const tau = t - R.delay; if (tau <= 0) return 0;
+  if (tau < R.Ta) return R.v * tau * tau / (2 * R.Ta);
+  let d = R.v * (Math.min(t, R.tD) - R.delay - R.Ta / 2);
+  if (t > R.tD) { const u = Math.min(1, (t - R.tD) / R.Td); d += R.v * R.Td / 3 * (1 - (1 - u) ** 3); }
+  return d;
+}
 const betLevel = () => BET_LEVELS[save.betIx];
 const jackpotNow = () => Math.floor(save.jpBase * betLevel());
 const cond = () => CONDITIONS[save.op.cond] || CONDITIONS['12-7-1'];
@@ -1037,6 +1050,7 @@ function partialPts(pts, f) { // first fraction f of a polyline (by length)
 }
 function reelPos(R, now) { // strip position of a spinning column (0 = final symbols in place)
   if (!R || !R.spinning) return 0;
+  if (R.cm) { const t = (now - R.t0) / 1000 * R.ts; return t >= R.tD + R.Td ? R.L : R.P0 - cmTravel(R, t); }
   if (R.qs) { const u = Math.min(1, (now - R.qs.t0) / 1000 * R.ts / R.qs.d); return R.qs.p0 * (1 - (R.lin ? u : easeBack(u, 2.2))); }
   const t = (now - R.t0) / 1000 * R.ts;
   if (t < 0) return R.P0;
@@ -1095,8 +1109,9 @@ function renderBoard(ctx, px, V) {
   for (let c = 0; c < 3; c++) {
     const R = V.reels && V.reels[c], spinning = R && R.spinning; ctx.save(); ctx.beginPath(); for (let r = 0; r < 3; r++) ctx.rect(6 + c * 32, 6 + r * 32, 24, 24); ctx.clip();
     if (spinning) {
-      const pos = reelPos(R, now), pos2 = reelPos(R, now - 16), speed = Math.abs(pos2 - pos) * 60, blur = speed > 6 && !R.lin, i0 = Math.floor(pos) - 1;
-      for (let i = i0; i <= i0 + 4; i++) { const sym = R.strip[i]; if (!sym) continue; const y = 18 + (i - pos) * PITCH; if (y < -16 || y > 116) continue;
+      const fq = R.cm ? 1000 / REEL_MOTION.visualFrameRate : 0, nq = R.cm ? R.t0 + Math.floor((now - R.t0) / fq) * fq : now, sc = ctx.getTransform().d || 1;
+      const pos = reelPos(R, nq), pos2 = reelPos(R, now - 16), speed = Math.abs(pos2 - pos) * 60, blur = speed > 6 && !R.lin, i0 = Math.floor(pos) - 1;
+      for (let i = i0; i <= i0 + 4; i++) { const sym = R.strip[i]; if (!sym) continue; let y = 18 + (i - pos) * PITCH; if (R.cm) y = Math.round(y * sc) / sc; if (y < -16 || y > 116) continue;
         if (blur) { drawSprite(ctx, sym, CX[c], y, SYM_SIZE, { stretch: 1.25, alpha: .45 }); drawSprite(ctx, sym, CX[c], y - 3, SYM_SIZE, { stretch: 1.25, alpha: .25 }); drawSprite(ctx, sym, CX[c], y + 3, SYM_SIZE, { stretch: 1.25, alpha: .25 }); }
         else drawSprite(ctx, sym, CX[c], y, SYM_SIZE); }
       if (blur) { ctx.fillStyle = 'rgba(255,250,235,.18)'; ctx.fillRect(6 + c * 32, 0, 24, 100); }
@@ -1149,7 +1164,19 @@ function makeReels(prev, next, holds, now, anticipCol, ts, rng, fill) {
   // CLASSIC (measured from Cherry Master '91 video): all reels start and stop together after ~1.05 s; a very fast
   // phase (~60 symbols/s, crisp, no blur) then ~0.25 s at ~12 symbols/s and a dead stop (no ease, no bounce).
   // MODERN: staggered stops .7/1.05/1.4 s, 25 symbols/s, eased landing with a small bounce, 7s anticipation.
-  const classic = save.op.reel === 'classic', stops = classic ? [1.05, 1.05, 1.05] : [.7, 1.05, 1.4], reels = [];
+  const classic = save.op.reel === 'classic';
+  if (classic) { const M = REEL_MOTION, v = M.cruiseSpeed, Ta = M.accelerationMs / 1000, Td = M.decelerationMs / 1000, reels = []; let k = 0;
+    for (let c = 0; c < 3; c++) {
+      if (holds[c]) { reels.push(null); continue; }
+      const tStop = (M.baseSpinMs + k++ * M.stopStaggerMs) / 1000, tD = tStop - Td, raw = v * (tD - Ta / 2) + v * Td / 3, P0 = Math.max(3, Math.floor(raw)), delay = Math.max(0, (raw - P0) / v), strip = [];
+      for (let r = 0; r < 3; r++) strip[r] = next[r][c];
+      for (let i = 3; i < P0; i++) strip[i] = fill ? fill() : rollSymbol(rng);
+      for (let r = 0; r < 3; r++) strip[P0 + r] = prev[r][c];
+      reels.push({ spinning: true, cm: true, t0: now, ts, P0, v, Ta, Td, delay, tD, L: 0, strip, lastI: P0, tStop, lin: true, stopAt: now + tStop * 1000 / ts });
+    }
+    return reels;
+  }
+  const stops = classic ? [1.05, 1.05, 1.05] : [.7, 1.05, 1.4], reels = [];
   for (let c = 0; c < 3; c++) {
     if (holds[c]) { reels.push(null); continue; }
     const tStop = stops[c] + (!classic && c === anticipCol ? 1.45 : 0), dDec = classic ? .25 : .42, dEnd = tStop - dDec, P0 = Math.round(3 + (classic ? 60 : 25) * dEnd), V = (P0 - 3) / dEnd, strip = [];
@@ -1183,12 +1210,19 @@ function doSpin() {
   G.canHold = false; G.heldShow = holds.some(x => x) ? holds : null; G.holds = [false, false, false];
   G.anticipCol = save.op.reel !== 'classic' && !holds[2] && hotCount(next, [0, 1]) >= 2 ? 2 : -1; G.anticip = -1;
   G.reels = makeReels(prev, next, holds, performance.now(), G.anticipCol, TS, G.vis, B ? () => rollFrom(G.vis, BONUS[B.mode].reel) : null);
-  G.spinT0 = performance.now(); G.autoLines = null; G.stopLog = []; G.af = null; G.planned = next.map(r => r.slice()); G.phase = 'spin'; Sfx.lever(); msg(B ? `${BONUS[B.mode].name} · FREE SPIN ${B.spin}/${B.spins}` : 'Good luck!'); hud();
+  G.spinT0 = performance.now(); G.autoLines = null; G.stopLog = []; G.stopTimes = []; G.af = null; G.planned = next.map(r => r.slice()); G.phase = 'spin'; Sfx.lever(); msg(B ? `${BONUS[B.mode].name} · FREE SPIN ${B.spin}/${B.spins}` : 'Good luck!'); hud();
 }
 // ---------- tap-to-stop (the result is fixed when the spin starts; stopping only lands the planned symbols sooner) ----------
 function stopReel(c) {
   if (G.phase !== 'spin' || !save.op.skillStop) return false; const R = G.reels[c]; if (!R || !R.spinning || R.qs) return false;
-  const now = performance.now(), p = reelPos(R, now), p0 = p > 3 ? 3 + (p % 1) : Math.max(p, .35);
+  const now = performance.now();
+  if (R.cm) { // distance-aware: keep cruising to the nearest grid slot whose symbols are still off-screen, then the same 220 ms decel
+    const t = (now - R.t0) / 1000 * R.ts, te = Math.max(t, R.delay + R.Ta), p = R.P0 - cmTravel(R, te), L = Math.floor(p - 2.4), tD2 = te + (p - L - R.v * R.Td / 3) / R.v;
+    if (L < 0 || tD2 >= R.tD) return false;
+    for (let r = 0; r < 3; r++) R.strip[L + r] = G.grid[r][c];
+    R.tD = tD2; R.L = L; R.qs = { t0: now }; R.stopAt = R.t0 + (tD2 + R.Td) * 1000 / R.ts; Sfx.click(); return true;
+  }
+  const p = reelPos(R, now), p0 = p > 3 ? 3 + (p % 1) : Math.max(p, .35);
   R.qs = { t0: now, p0, d: .2 + .05 * p0 }; if (G.anticip === c) { G.anticip = -1; G.anticipCol = -1; }
   if (c === G.anticipCol) G.anticipCol = -1; Sfx.click(); return true;
 }
@@ -1200,8 +1234,8 @@ function updateReels(now) {
   G.reels.forEach((R, c) => {
     if (!R || !R.spinning) return; const t = (now - R.t0) / 1000 * R.ts, pos = reelPos(R, now), fi = Math.floor(pos);
     if (fi !== R.lastI) { R.lastI = fi; Sfx.tick(); }
-    const done = R.qs ? (now - R.qs.t0) / 1000 * R.ts >= R.qs.d : t >= R.dEnd + R.dDec;
-    if (done) { R.spinning = false; (G.stopLog = G.stopLog || []).push(c); if (R.qs) Sfx.clack(c); else Sfx.thunk(c); if (G.anticip === c) G.anticip = -1; if (c === 1 && G.anticipCol === 2 && G.reels[2] && G.reels[2].spinning) { G.anticip = 2; Sfx.tease(); msg('Ooh… RED 7s showing…'); } }
+    const done = R.cm ? t >= R.tD + R.Td : R.qs ? (now - R.qs.t0) / 1000 * R.ts >= R.qs.d : t >= R.dEnd + R.dDec;
+    if (done) { R.spinning = false; (G.stopLog = G.stopLog || []).push(c); (G.stopTimes = G.stopTimes || []).push({ c, at: R.stopAt, pos: R.cm ? R.L : 0 }); if (R.qs) Sfx.clack(c); else Sfx.thunk(c); if (G.anticip === c) G.anticip = -1; if (c === 1 && G.anticipCol === 2 && G.reels[2] && G.reels[2].spinning) { G.anticip = 2; Sfx.tease(); msg('Ooh… RED 7s showing…'); } }
     else all = false;
   });
   if (all) afterSpin();
@@ -1518,21 +1552,40 @@ const OP_ROWS = [
   { k: 'skillStop', sw: '8', label: 'SKILL STOP (TAP TO STOP)', vals: [true, false], fmt: v => v ? 'ON' : 'OFF' },
   { k: 'af', sw: 'B1', label: 'ALL FRUITS', vals: ['fixed', 'prog'], fmt: v => v === 'fixed' ? `FIXED ${ALLFRUIT.fixed}×` : `POT ${ALLFRUIT.base}-${ALLFRUIT.max}` },
   { k: 'reel', sw: 'B2', label: 'REEL STYLE', vals: ['classic', 'modern'], fmt: v => v.toUpperCase() },
+  { k: 'tune', sw: 'B2', label: 'REEL TUNING ›', vals: [], fmt: () => `${REEL_MOTION.cruiseSpeed}/s · ${REEL_MOTION.stopStaggerMs}ms` },
 ];
 const opGet = R => R.k == null ? 0 : R.root ? save[R.k] : save.op[R.k];
 function dipBits() { const ix = R => Math.max(0, R.vals.indexOf(opGet(R))); const c = ix(OP_ROWS[0]); return [c & 1, c >> 1 & 1, ix(OP_ROWS[1]), ix(OP_ROWS[2]), ix(OP_ROWS[3]), ix(OP_ROWS[4]), ix(OP_ROWS[5]), ix(OP_ROWS[6])]; }
 function dipBitsB() { return [Math.max(0, OP_ROWS[7].vals.indexOf(save.op.af)), Math.max(0, OP_ROWS[8].vals.indexOf(save.op.reel)), 0, 0]; }
+const TUNE_ROWS = [
+  { k: 'baseSpinMs', label: 'FIRST STOP AFTER', step: 50, min: 300, max: 3000, u: 'ms' },
+  { k: 'stopStaggerMs', label: 'STOP STAGGER', step: 25, min: 0, max: 800, u: 'ms' },
+  { k: 'cruiseSpeed', label: 'CRUISE SPEED', step: 1, min: 4, max: 60, u: ' sym/s' },
+  { k: 'accelerationMs', label: 'ACCEL RAMP (LINEAR)', step: 10, min: 0, max: 400, u: 'ms' },
+  { k: 'decelerationMs', label: 'DECEL (EASE-OUT CUBIC)', step: 10, min: 60, max: 800, u: 'ms' },
+  { k: 'visualFrameRate', label: 'VISUAL FRAME RATE', vals: [12, 15, 20, 24, 30, 60], u: ' fps' },
+];
+let SV_PAGE = 'main';
+function renderTune() {
+  $('svRows').innerHTML = '<div class="svrow dis" style="opacity:1;color:#b6ffbe">B2 · REEL TUNING (CLASSIC)</div>' + TUNE_ROWS.map((T, i) => `<div class="svrow tune" data-i="${i}"><span class="k">${T.label}</span><span style="display:flex;gap:6px;align-items:center"><button class="svbtn alt tdn" style="padding:2px 9px">−</button><span class="v" style="min-width:74px;text-align:right">${REEL_MOTION[T.k]}${T.u}</span><button class="svbtn alt tup" style="padding:2px 9px">+</button></span></div>`).join('')
+    + `<div class="svrow dis" style="opacity:.75"><span class="k">OVERSHOOT / BOUNCE / BLUR</span><span class="v">0 / OFF / OFF</span></div><div class="svrow dis" style="opacity:.75"><span class="k">SNAP TO GRID</span><span class="v">ON</span></div>`
+    + '<div class="svbtns"><button class="svbtn alt" id="tuneReset">RESET DEFAULTS</button><button class="svbtn" id="tuneBack">BACK</button></div>';
+  $('svRows').querySelectorAll('.tune').forEach(el => { const T = TUNE_ROWS[+el.dataset.i]; const bump = d => { let v = REEL_MOTION[T.k]; if (T.vals) v = T.vals[clamp(T.vals.indexOf(v) + d, 0, T.vals.length - 1)]; else v = clamp(v + d * T.step, T.min, T.max); setReelMotion({ [T.k]: v }); Sfx.click(); renderTune(); }; el.querySelector('.tdn').onclick = () => bump(-1); el.querySelector('.tup').onclick = () => bump(1); });
+  $('tuneReset').onclick = () => { setReelMotion(null); Sfx.click(); renderTune(); }; $('tuneBack').onclick = () => { SV_PAGE = 'main'; Sfx.click(); renderOp(); };
+  const M = REEL_MOTION; $('svNote').innerHTML = `CLASSIC reels: linear ramp ${M.accelerationMs} ms → constant ${M.cruiseSpeed} symbols/s → ease-out-cubic ${M.decelerationMs} ms landing exactly on the symbol (no overshoot, no bounce). Reels stop left→right at ${M.baseSpinMs} / ${M.baseSpinMs + M.stopStaggerMs} / ${M.baseSpinMs + 2 * M.stopStaggerMs} ms. Drawn at ${M.visualFrameRate} fps on whole pixels; timing is frame-rate independent. Saved on this device.`;
+}
 function renderOp() {
+  if (SV_PAGE === 'tune') return renderTune();
   const bits = dipBits(); $('dip').innerHTML = '<span class="lbl">ON<br>▲</span>' + bits.map((b, i) => `<span class="dipsw ${b ? 'on' : ''}"><i></i>${i + 1}</span>`).join('');
   $('dipB').innerHTML = '<span class="lbl">B<br>▲</span>' + dipBitsB().map((b, i) => `<span class="dipsw ${b ? 'on' : ''}"><i></i>${i + 1}</span>`).join('');
   $('svRows').innerHTML = OP_ROWS.map((R, i) => `<button class="svrow ${R.k == null || (R.dep && !save.op[R.dep]) ? 'dis' : ''}" data-i="${i}"><span class="k">SW ${R.sw.padEnd(3, ' ')} ${R.label}</span><span class="v">${R.fmt(opGet(R))}</span></button>`).join('');
-  $('svRows').querySelectorAll('.svrow').forEach(b => b.onclick = () => { const R = OP_ROWS[+b.dataset.i]; if (R.k == null || (R.dep && !save.op[R.dep])) return; const v = R.vals[(R.vals.indexOf(opGet(R)) + 1) % R.vals.length]; if (R.root) save[R.k] = v; else save.op[R.k] = v; persist(); Sfx.click(); renderOp(); hud(); });
+  $('svRows').querySelectorAll('.svrow').forEach(b => b.onclick = () => { const R = OP_ROWS[+b.dataset.i]; if (R.k == null || (R.dep && !save.op[R.dep])) return; if (R.k === 'tune') { SV_PAGE = 'tune'; Sfx.click(); renderOp(); return; } const v = R.vals[(R.vals.indexOf(opGet(R)) + 1) % R.vals.length]; if (R.root) save[R.k] = v; else save.op[R.k] = v; persist(); Sfx.click(); renderOp(); hud(); });
   const c = cond();
   $('svNote').innerHTML = `<b>THREE BONUS CONDITION ${save.op.cond}</b> — modelled on Dyna Cherry Master '91 / I. Cherry number = cherry pairs for a CHERRY BONUS (here: +1 per drawn cherry line, except straight 3-cherry lines; needs ${c[0]}); 3 cherries landing on any of the 8 classic lines start a CHERRY BONUS automatically. Bell number = bell lines of 3+ for a BELL BONUS (needs ${c[1]}). BAR number: 3 single BARs landing on a classic line start a 1 BAR BONUS automatically. Lower numbers = more bonuses, looser machine (skilled return ≈1.04–1.06, casual ≈0.82 at 12-7-1 — fun credits only).<br>
   <b>MIN. BET</b> — meters only charge at or above it. "8" maps to our smallest stake (BET 10), "16" to BET 20+.<br>
   <b>W-UP</b> — BIG (8–K) or SMALL (A–6). "7" is a LOSS or a TIE (push). <b>PAYOUT</b> 90% / 80% is set by Jokers shuffled into the 52-card deck (a Joker always loses): 7=LOSS uses +1 / +8 Jokers, 7=TIE +5 / +12, so a guess returns ≈90.6% / 80.0%. Disabled = wins are collected automatically.<br>
   <b>SKILL STOP</b> — ON: while the reels spin, tap a reel to stop it, STOP stops the next reel left→right, hold STOP (or keep tapping) to stop all. The result is fixed when the spin starts, so stopping never changes what lands — it only lands sooner. OFF: reels stop by themselves.<br>
-  <b>B2 · REEL STYLE</b> — CLASSIC (default) copies the original cabinet as measured from gameplay video: all three reels start and stop together after about 1 second, spin too fast to read, slow for the last quarter second and stop dead. MODERN: reels stop one by one with an eased bounce and a slow-down tease when RED 7s show.<br>
+  <b>B2 · REEL STYLE</b> — CLASSIC (default) copies the original cabinet as measured from gameplay video: reels start together, cruise at a steady retro pace and stop one by one left→right (default 0.9 s, then every 0.25 s) with a short exact landing — adjust in REEL TUNING. MODERN: reels stop one by one with an eased bounce and a slow-down tease when RED 7s show.<br>
   <b>BANK B · ALL FRUITS</b> — pays instantly when all 9 symbols that land are fruit (cherry/orange/plum/melon) with all four kinds showing (≈1 in 40 spins, not during bonuses). FIXED pays ${ALLFRUIT.fixed}× your stake (skilled return ≈1.04–1.06, casual ≈0.82). POT (progressive) pays a pot that starts at ${ALLFRUIT.base}, grows +${ALLFRUIT.grow} per paid spin up to ${ALLFRUIT.max} (× bet level) — close to FIXED: skilled ≈1.06–1.08, casual ≈0.84.`;
 }
 // ---------- HUD ----------
@@ -1661,7 +1714,7 @@ $('ptClose').onclick = () => { Sfx.click(); showOv('ptOv', false); };
 $('bonusGo').onclick = async () => { const m = $('bonusGo').dataset.mode; Sfx.click(); showOv('bonusOv', false); $('cab').classList.remove('frenzy'); if (m) { save.seen[m] = 1; persist(); } hud();
   if (G.bonus && G.bonus.mode === 'bell' && save.pool > 0 && !G.bonus.poolDone) { G.bonus.poolDone = 1; const ph = G.phase; G.phase = 'collect'; hud(); await poolTake(); G.phase = ph; }
   if (G.bonus) msg(`${BONUS[G.bonus.mode].name} · ${G.bonus.spins > 1 ? 'FREE GAME 1/' + G.bonus.spins : 'YOUR 7s SPIN'} — press SPIN`); hud(); };
-$('svcBtn').onclick = () => { Sfx.unlock(); Sfx.click(); renderOp(); showOv('opOv', true); };
+$('svcBtn').onclick = () => { Sfx.unlock(); Sfx.click(); SV_PAGE = 'main'; renderOp(); showOv('opOv', true); };
 $('svExit').onclick = () => { Sfx.click(); showOv('opOv', false); hud(); };
 $('svReset').onclick = () => { save.meters = { cherry: 0, bell: 0, bar: 0 }; persist(); Sfx.click(); toast('Bonus meters reset'); hud(); };
 addEventListener('keydown', e => { if (G.screen !== 'game') return; if (e.code === 'Space') { e.preventDefault(); if (G.phase === 'spin') { if (canStop()) stopNext(); return; } if (!e.repeat) $('spinBtn').click(); } if (e.code === 'Enter' && G.phase === 'result') collect(); });
@@ -1669,8 +1722,9 @@ addEventListener('resize', () => requestAnimationFrame(layout));
 document.addEventListener('visibilitychange', () => { if (document.hidden) Music.stop(.2); else if (Sfx.ctx && save.music) Music.start(); });
 addEventListener('pointerdown', () => Sfx.unlock(), { once: true });
 // ---------- loop ----------
+let FREEZE = null; // tests: render a fixed clock (frame strips)
 function frame(now) {
-  requestAnimationFrame(frame);
+  requestAnimationFrame(frame); if (FREEZE != null) now = FREEZE;
   if (G.screen === 'game') {
     updateReels(now);
     if (G.phase === 'draw' && G.timerEnd) { const rem = G.timerEnd - now, tot = DRAW_TIME * 1000 / TS; $('fuse').style.width = clamp(rem / tot, 0, 1) * 100 + '%'; const sec = Math.ceil(rem * TS / 1000); if (sec !== G.timerSec) { G.timerSec = sec; if (sec <= 5 && sec > 0) Sfx.timer(); } if (rem <= 0) endDraw(); }
@@ -1684,8 +1738,8 @@ document.querySelectorAll('.tbm').forEach(el => { const c = el.querySelector('ca
 layout(); hud(); requestAnimationFrame(frame);
 // ---------- test hooks ----------
 window.__iq = {
-  marker: 'CHERRY_LINES_v4_3', stopReel, stopNext, stopAll, canStop, isAllFruits, afAmount, ALLFRUIT, G, save, demo, NODES, SYMBOLS, solveBoard, anyLineLeft, payOf, classOf,
-  seed(n) { G.rng = mulberry(n); }, trigger(mode) { if (G.phase !== 'idle' || G.bonus) return false; G.queue.push(mode); afterRound(); return true; }, forceCard(c) { G.forcedCard = c; }, setOp(o) { Object.assign(save.op, o); persist(); hud(); }, curPayFn, cond, BONUS, CONDITIONS, force(grid) { G.forced = grid; }, fast(v) { TS = v; },
+  marker: 'CHERRY_LINES_v4_4', REEL_MOTION, REEL_MOTION_DEFAULT, setReelMotion, cmTravel, makeReels, reelPos, updateReels, stopReel, stopNext, stopAll, canStop, isAllFruits, afAmount, ALLFRUIT, G, save, demo, NODES, SYMBOLS, solveBoard, anyLineLeft, payOf, classOf,
+  seed(n) { G.rng = mulberry(n); }, trigger(mode) { if (G.phase !== 'idle' || G.bonus) return false; G.queue.push(mode); afterRound(); return true; }, forceCard(c) { G.forcedCard = c; }, setOp(o) { Object.assign(save.op, o); persist(); hud(); }, curPayFn, cond, BONUS, CONDITIONS, force(grid) { G.forced = grid; }, fast(v) { TS = v; }, freeze(v) { FREEZE = v; },
   boardClient(x, y) { return boardToScreen({ x, y }); }, pathPoints, mult, betLevel, jackpotNow,
   state() { return { pool: save.pool, phase: G.phase, credits: save.credits, win: G.win, lines: G.lines.map(L => ({ cells: L.cells, cls: L.cls, base: L.base })), burnt: [...G.burnt], grid: G.grid, canHold: G.canHold, holds: G.holds, meters: { ...save.meters }, bonus: G.bonus && { mode: G.bonus.mode, spin: G.bonus.spin, spins: G.bonus.spins, total: G.bonus.total, sticky: [...G.bonus.sticky] }, queue: G.queue.slice(), op: { ...save.op }, natural: G.natural, jp: jackpotNow(), bet: betLevel(), gam: G.gam && { amt: G.gam.amt, steps: G.gam.steps, last: G.gam.last, hist: G.gam.hist.slice(), busy: G.gam.busy } }; },
   renderChipOffline,
