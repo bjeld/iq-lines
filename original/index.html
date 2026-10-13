@@ -557,11 +557,12 @@ function buildWindows(grid, mode, now) {
 }
 function quickStop(w, delay = 0) { // keep cruising to the nearest slot still out of sight, then the same halving stop
   const W = G.W[w]; if (!W || !W.spinning || W.qs) return false; const now = performance.now(), t = (now - W.t0) / 1000 * TS + delay, te = Math.max(t, W.delay + MOTION.Ta);
-  if (te >= W.tD) return false; const p = W.P0 - travel(W, te), Tq = MOTION.Tq, Dd = MOTION.v * Tq * MOTION.k, L = Math.floor(p - Math.max(Dd, 2.3)), tD2 = te + (p - L - Dd) / MOTION.v;
-  if (tD2 + Tq >= W.tD + W.Td) return false; const r = Math.floor(w / 3), c = w % 3; W.strip[L] = G.grid[r][c]; W.strip[L - 1] = pick(G.vis, REELS[G.mode]); W.strip[L + 1] = pick(G.vis, REELS[G.mode]);
+  if (te >= W.tD) return false; const p = W.P0 - travel(W, te), Tq = MOTION.Tq, Dd = MOTION.v * Tq * MOTION.k, L = Math.floor(p - Math.max(Dd, 1.15)), tD2 = te + (p - L - Dd) / MOTION.v;
+  if (tD2 + Tq >= W.tD + W.Td) return false; const r = Math.floor(w / 3), c = w % 3; W.strip[L] = G.grid[r][c]; W.strip[L - 1] = pick(G.vis, REELS[G.mode]); // slot L is still above the window (out of sight); L+1 keeps its symbol
   W.L = L; W.tD = tD2; W.Td = Tq; W.qs = true; W.stopAt = W.t0 + (tD2 + Tq) * 1000 / TS; return true;
 }
-function stopCol(c) { if (G.phase !== 'spin' || !save.op.skillStop) return false; for (const w of ORDER) if (w % 3 === c && quickStop(w)) return true; return false; }
+function stopCol(c) { // STOP 1/2/3 = reel (column) 1/2/3: all its windows, same quick stepped stop + 70 ms stagger as STOP ALL
+  if (G.phase !== 'spin' || !save.op.skillStop) return false; let k = 0; for (const w of ORDER) if (w % 3 === c && quickStop(w, k * .02)) k++; return k > 0; }
 function stopAll() { if (G.phase !== 'spin' || !save.op.skillStop) return false; let k = 0, any = false; for (const w of ORDER) if (quickStop(w, k * .07)) { k++; any = true; } return any; }
 function startSpin() {
   if (G.phase !== 'idle') return; Sfx.unlock(); const B = G.bonus;
