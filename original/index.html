@@ -1,0 +1,679 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>CHERRY CLASSIC '91 — a tribute to the 1991 Dyna classic</title>
+<meta name="description" content="CHERRY CLASSIC '91: a free fun-credit tribute to the 1991 Dyna nine-window fruit machine. 8 lines, Cherry / Bell / 1 Bar bonus, double up. No real money.">
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;background:#000;color:#fff;font-family:"Courier New",monospace;overflow:hidden;user-select:none;-webkit-user-select:none;touch-action:manipulation}
+#wrap{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom)}
+#scr{display:block;background:#000;image-rendering:pixelated;box-shadow:0 0 0 2px #111,0 0 40px rgba(40,200,200,.15)}
+#panel{width:100%;display:flex;flex-direction:column;align-items:center;gap:10px;padding:12px 8px;background:linear-gradient(#141414,#050505);flex:1}
+.row{display:flex;gap:8px;justify-content:center;width:100%;max-width:640px}
+.ab{flex:1;max-width:104px;min-height:58px;border-radius:8px;border:none;font:700 12px/1.15 "Courier New",monospace;color:#fff;text-shadow:0 1px 0 #000;box-shadow:inset 0 -6px 0 rgba(0,0,0,.35),0 3px 0 #000;cursor:pointer;padding:4px 2px;letter-spacing:.5px}
+.ab:active,.ab.dn{transform:translateY(2px);box-shadow:inset 0 -3px 0 rgba(0,0,0,.35),0 1px 0 #000}
+.ab.off{filter:saturate(.25) brightness(.45)}
+.ab.lit{animation:lit .6s steps(2) infinite}
+@keyframes lit{50%{filter:brightness(1.6)}}
+.p{background:#a03cc0}.o{background:#b4641e}.r{background:#c8202c}.g{background:#1f9a38}.k{background:#333;max-width:150px;min-height:38px;font-size:11px}
+#svc{position:fixed;inset:0;background:rgba(0,0,0,.92);display:none;overflow:auto;padding:16px;z-index:9;color:#7dff8a;font:13px/1.4 "Courier New",monospace}
+#svc.on{display:block}#svc h2{margin:0 0 8px;font-size:15px;color:#b6ffbe}
+.sv{display:flex;justify-content:space-between;gap:8px;width:100%;max-width:560px;background:none;border:0;color:#7dff8a;font:inherit;padding:7px 4px;text-align:left;cursor:pointer;border-bottom:1px dashed #1d5a26}
+.sv b{color:#fff;font-weight:700}.svb{margin:12px 8px 0 0;font:700 13px "Courier New",monospace;background:#7dff8a;color:#000;border:0;padding:8px 14px;border-radius:3px;cursor:pointer}
+#svNote{max-width:560px;color:#3fbf55;font-size:11.5px;margin-top:10px}
+</style></head><body>
+<div id="wrap"><canvas id="scr" width="1280" height="960"></canvas>
+<div id="panel">
+ <div class="row"><button class="ab p" id="b1">STOP 1<br>TAKE</button><button class="ab o" id="b2">STOP 2<br>BIG</button><button class="ab r" id="b3">STOP 3<br>SMALL</button></div>
+ <div class="row"><button class="ab r" id="bBet">BET</button><button class="ab r" id="b4">STOP ALL<br>D-UP</button><button class="ab g" id="bStart">START</button></div>
+ <div class="row"><button class="ab k" id="bCoin">INSERT COIN</button><button class="ab k" id="bSvc">SERVICE</button><button class="ab k" id="bSnd">SOUND ON</button></div>
+</div></div>
+<div id="svc"><h2>SERVICE MODE · DIP SWITCHES</h2><div id="svRows"></div>
+<button class="svb" id="svMeters">RESET METERS</button><button class="svb" id="svCred">RESET CREDITS</button><button class="svb" id="svExit">EXIT</button><div id="svNote"></div></div>
+<script>
+// ===== CHERRY CLASSIC '91 — game logic (a tribute to the 1991 Dyna classic). Runs in browser and node (sim.js). =====
+const CC_MARKER = 'CHERRY_CLASSIC_v1';
+function mulberry(a) { return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
+// 8 lines, numbered as on the cabinet: 1 middle row, 2 top row, 3 bottom row, 4 diag top-left→bottom-right,
+// 5 diag bottom-left→top-right, 6/7/8 left/centre/right column. Each line is read from its first cell (cherry rule).
+const LINES = [
+  [[1, 0], [1, 1], [1, 2]], [[0, 0], [0, 1], [0, 2]], [[2, 0], [2, 1], [2, 2]], [[0, 0], [1, 1], [2, 2]],
+  [[2, 0], [1, 1], [0, 2]], [[0, 0], [1, 0], [2, 0]], [[0, 1], [1, 1], [2, 1]], [[0, 2], [1, 2], [2, 2]],
+];
+// normal odds table (x line bet)
+const PAY = { seven: 200, bar3: 100, bar2: 50, bar: 30, melon: 20, bell: 18, plum: 14, orange: 10, anybar: 10, superbar: 200 };
+const CHERRY_PAY = [0, 2, 5, 10]; // 1, 2, 3 cherries from the first cell of a line
+const ALL_FRUIT_X = 15, FRUITS = ['cherry', 'orange', 'plum', 'melon'];
+const SEVENS_PAY = [0, 0, 2, 5, 20, 50, 100, 200, 400, 1000]; // CHERRY BONUS: number of 7s on screen -> x total bet
+const isBar = s => s === 'bar' || s === 'bar2' || s === 'bar3' || s === 'superbar';
+const isSeven = s => s === 'seven' || s === 'seven3';
+// reel strips (relative stop weights per window; each of the 9 windows is its own reel)
+const REELS = {
+  main: { cherry: 4, orange: 6, plum: 5, bell: 7, melon: 3, bar: 4, bar2: 2.2, bar3: 1.4, seven: 1.2 },
+  cherry: { seven3: 2.1, cherry: 3, bar: 1.2, bar2: 1, bar3: .8, blank: 3 },
+  bell: { bell: 4, cherry: 2, orange: 2, plum: 2, melon: 1.2, bar: 1.2, seven: .5, blank: 2 },
+  bar: { superbar: .9, bar: 2.6, bar2: 1.6, bar3: 1, cherry: 2, orange: 2, plum: 2, blank: 2.5 },
+};
+const FREE_GAMES = 7, BELL_SINGLE = 1; // BELL BONUS: each bell on screen pays BELL_SINGLE x (total bet / 8)
+const CONDITIONS = { '12-7-1': [12, 7, 1], '9-5-1': [9, 5, 1], '6-3-1': [6, 3, 1], '3-2-1': [3, 2, 1] };
+// main game rate: a winning result is re-drawn with probability REDRAW[rate] (payout control, as the real boards did)
+const RATES = [55, 60, 65, 70, 75, 80, 85, 90];
+let REDRAW = {55: 0.754, 60: 0.71, 65: 0.658, 70: 0.6, 75: 0.533, 80: 0.483, 85: 0.415, 90: 0.333}; // tuned by tune_rates.js (sim, bet 16, 12-7-1)
+function pick(r, w) { let tot = 0; for (const k in w) tot += w[k]; let x = r() * tot; for (const k in w) { x -= w[k]; if (x < 0) return k; } return Object.keys(w)[0]; }
+function rollGrid(r, mode = 'main') { const w = REELS[mode]; return [0, 1, 2].map(() => [0, 1, 2].map(() => pick(r, w))); }
+function lineBets(total) { return LINES.map((_, i) => Math.floor(total / 8) + (i < total % 8 ? 1 : 0)); }
+function lineResult(syms) {
+  const [a, b, c] = syms;
+  if (a === 'cherry') { const n = b === 'cherry' ? (c === 'cherry' ? 3 : 2) : 1; return { kind: 'cherry' + n, n, mult: CHERRY_PAY[n], cells: n }; }
+  if (a === b && b === c && PAY[a]) return { kind: a, mult: PAY[a], cells: 3 };
+  if (isSeven(a) && isSeven(b) && isSeven(c)) return { kind: 'seven', mult: PAY.seven, cells: 3 };
+  if (isBar(a) && isBar(b) && isBar(c)) return { kind: 'anybar', mult: PAY.anybar, cells: 3 };
+  return null;
+}
+function evalGrid(grid, lb, mode = 'main') { // -> { wins:[{line,kind,mult,pay,cells}], total, allFruit, sevens, bells, events }
+  const wins = []; let total = 0;
+  if (mode !== 'cherry') LINES.forEach((L, i) => { if (!lb[i]) return; const res = lineResult(L.map(([r, c]) => grid[r][c])); if (res) { const pay = res.mult * lb[i]; wins.push({ line: i, ...res, pay }); total += pay; } });
+  const flat = grid.flat(), B = lb.reduce((a, b) => a + b, 0), out = { wins, total, extra: 0, B };
+  out.sevens = flat.filter(isSeven).length; out.bells = flat.filter(s => s === 'bell').length;
+  if (mode === 'main' && flat.every(s => FRUITS.includes(s))) { out.allFruit = ALL_FRUIT_X * B; out.extra += out.allFruit; }
+  if (mode === 'cherry') { out.sevensPay = SEVENS_PAY[out.sevens] * B; out.extra += out.sevensPay; }
+  if (mode === 'bell') { out.bellPay = Math.max(1, Math.round(out.bells * BELL_SINGLE * B / 8)) * (out.bells ? 1 : 0); out.extra += out.bellPay; }
+  out.cherryPairs = wins.filter(w => w.kind === 'cherry2').length; out.cherry3 = wins.some(w => w.kind === 'cherry3');
+  out.bellLines = wins.filter(w => w.kind === 'bell').length; out.bar1 = wins.some(w => w.kind === 'bar');
+  out.centerSeven = isSeven(grid[1][1]); out.sum = total + out.extra; return out;
+}
+function mainSpin(r, op, lb) { // payout-controlled main game result
+  let g = rollGrid(r, 'main'), e = evalGrid(g, lb);
+  for (let k = 0; k < 3 && e.sum > 0 && r() < REDRAW[op.rate]; k++) { g = rollGrid(r, 'main'); e = evalGrid(g, lb); }
+  return { grid: g, ev: e };
+}
+// meters: returns list of bonuses earned this game (bet must reach the bonus min. bet)
+function applyMeters(st, ev, op) {
+  const out = []; if (ev.B < op.minBet) return out; const cond = CONDITIONS[op.cond];
+  if (ev.cherry3) out.push('cherry');
+  st.meters.cherry += ev.cherryPairs; if (st.meters.cherry >= cond[0]) { st.meters.cherry = 0; out.push('cherry'); }
+  st.meters.bell += ev.bellLines; if (st.meters.bell >= cond[1]) { st.meters.bell = 0; out.push('bell'); }
+  if (ev.bar1) out.push('bar');
+  if (ev.centerSeven) st.pool += Math.max(1, Math.round(ev.B / 2));
+  return out;
+}
+// W-UP (DOUBLE UP): deck = 52 cards + jokers; BIG 8-K, SMALL A-6; 7 = LOSS or TIE; jokers always lose.
+const WUP_JOKERS = { loss: { 90: 1, 80: 8 }, tie: { 90: 5, 80: 12 } };
+function wupDraw(r, jokers) { const n = 52 + jokers, k = Math.floor(r() * n); if (k >= 52) return { rank: 0, suit: 4 }; return { rank: k % 13 + 1, suit: Math.floor(k / 13) }; }
+function wupJudge(card, guess, seven) { if (!card.rank) return 'lose'; if (card.rank === 7) return seven === 'tie' ? 'tie' : 'lose'; const big = card.rank >= 8; return (guess === 'big') === big ? 'win' : 'lose'; }
+if (typeof module !== 'undefined') module.exports = { CC_MARKER, mulberry, LINES, PAY, CHERRY_PAY, SEVENS_PAY, REELS, CONDITIONS, RATES, REDRAW, FREE_GAMES, ALL_FRUIT_X, rollGrid, lineBets, lineResult, evalGrid, mainSpin, applyMeters, wupDraw, wupJudge, WUP_JOKERS, setRedraw: o => Object.assign(REDRAW, o) };
+
+// ======================= original pixel-art symbols (drawn in code, 16x16) =======================
+const PAL = {
+  k: '#1a0b22', r: '#e8203a', R: '#9b0f26', w: '#fff3f0', g: '#3cc45a', G: '#1b7a32', b: '#7a4320',
+  o: '#ff9f1a', O: '#cc5f00', p: '#8a4dff', P: '#4f1fa8', q: '#c9a6ff', s: '#2a0a14', l: '#d9ffb8', m: '#2fa84c', M: '#13602a',
+  y: '#ffd23f', Y: '#c98a00', v: '#fff6c0', u: '#2f7bff', U: '#0b3fb3', t: '#14b8d8', T: '#05708c', z: '#ff4fb8', Z: '#a0006a', x: '#ffd0ea', n: '#ff6b6b',
+  K: '#0c0c0c', m: '#2fd04a', e: '#1fb04a', E: '#0b6a2a', h: '#0f5a1e', j: '#4fc85a', a: '#f0354a', f: '#ffc21a',
+};
+const SPR = {
+  cherry: [
+    '..........kkk...', '.........kgggk..', '........kggggGk.', '.......kbkgGGk..', '......kb.bkkk...', '.....kb...b.....', '....kb.....b....', '...kb......b....',
+    '..kkkk....kkkk..', '.krrrrk..krrrrk.', 'krwwrrRkkrwwrrRk', 'krwrrrRkkrwrrrRk', 'krrrrRRkkrrrrRRk', 'krrrRRRkkrrrRRRk', '.kRRRRk..kRRRRk.', '..kkkk....kkkk..'],
+  orange: [
+    '.......kk.......', '......kgGk......', '....kkkbkkk.....', '...kooooooOk....', '..kowwooooOOk...', '.kowwooooooOOk..', '.kowoooooooooOk.', 'koooooooooooOOk.',
+    'kooooooooooooOk.', 'kooooooooooooOk.', 'koooooooooooOOk.', '.koooooooooOOk..', '.kOooooooooOOk..', '..kOOooooOOOk...', '...kkOOOOOkk....', '.....kkkkk......'],
+  plum: [
+    '................', '...........kk...', '..........kbk...', '.....kkkkkbkk...', '...kkpppppbppkk.', '..kppqqppppppPk.', '.kppqqpppppppPPk', '.kpqqppppppppPPk',
+    '.kpqpppppppppPPk', '.kppppppppppPPPk', '.kpppppppppPPPPk', '..kppppppPPPPPk.', '...kkPPPPPPPPkk.', '.....kkkkkkkk...', '................', '................'],
+  melon: [
+    '................', '................', 'kkkkkkkkkkkkkkkk', 'krrrrrrrrrrrrrrk', 'krrsrrrrrsrrrrrk', '.krrrrrsrrrrsrk.', '.krrsrrrrrrrrrk.', '..krrrrrsrrrrk..',
+    '..klrrrrrrrrlk..', '...kllrrrrllk...', '...kmllllllmk...', '....kmMmMmMk....', '.....kkkkkk.....', '................', '................', '................'],
+  bell: [
+    '.......kk.......', '......kyyk......', '.....kyyyyk.....', '....kyvyyyYk....', '....kvyyyyYk....', '...kvyyyyyyYk...', '...kvyyyyyyYk...', '...kyyyyyyyYk...',
+    '..kyyyyyyyyyYk..', '..kyyyyyyyyyYk..', '.kyyyyyyyyyyyYk.', 'kYYYYYYYYYYYYYYk', '.kkkkkkkkkkkkkk.', '......kYYk......', '.......kk.......', '................'],
+  seven: [
+    'kkkkkkkkkkkkkkk.', 'kwwwwwwwwwwwwrk.', 'krrrrrrrrrrrrRk.', 'kRRRRRRRkrrrRRk.', 'kkkkkkkkkrrRRk..', '........krrRk...', '.......kwrRRk...', '.......krrRk....',
+    '......kwrRRk....', '......krrRk.....', '.....kwrRRk.....', '.....krrRk......', '....kwrRRk......', '....krrRRk......', '....kRRRRk......', '....kkkkkk......'],
+  wild: [
+    '.......kk.......', '......kzzk......', '......kzzk......', '.....kzxzzk.....', 'kkkkkkzxzzzkkkkk', 'kzzzzzzzzzzzzzzk', '.kzzxzzzzzzzzZk.', '..kzzzzzzzzzZk..',
+    '...kzzzzzzzzZk..', '...kzzzzzzzzZk..', '..kzzzzkkzzzZZk.', '..kzzzk..kzzZZk.', '.kzzk......kZZk.', '.kkk........kkk.', '................', '................'],
+};
+const LETTER = { B: ['yy.', 'y.y', 'yy.', 'y.y', 'yy.'], A: ['.y.', 'y.y', 'yyy', 'y.y', 'y.y'], R: ['yy.', 'y.y', 'yy.', 'yy.', 'y.y'] };
+function barPlate(fill, dark) { // 16x7 plate reading BAR
+  const rows = []; for (let y = 0; y < 7; y++) { let s = ''; for (let x = 0; x < 16; x++) s += (y === 0 || y === 6 || x === 0 || x === 15) ? 'k' : (y === 5 ? dark : fill); rows.push(s.split('')); }
+  let x0 = 2; for (const ch of 'BAR') { LETTER[ch].forEach((ln, y) => [...ln].forEach((c, dx) => { if (c === 'y') rows[y + 1][x0 + dx] = 'y'; })); x0 += 4; }
+  rows[1][14] = 'v'; return rows.map(r => r.join(''));
+}
+SPR.bar = ['................', '................', '................', '................', ...barPlate('u', 'U'), '................', '................', '................', '................', '................'];
+SPR.bar2 = [...barPlate('t', 'T'), '................', ...barPlate('t', 'T'), '................'];
+// v4.1: symbols redrawn in the style of the Dyna Cherry Master cabinet (own pixel art, authored as grids)
+Object.assign(SPR, {
+  melon: [
+    '................',
+    '................',
+    '.....kkkkk......',
+    '..kkkkjhlkkkk...',
+    '.kkhjhhjlwaakk..',
+    'kkhgghhjlwaaakk.',
+    'khghhjhhlwasaak.',
+    'khhjhhjhlwaaask.',
+    'khhjhhjhlwaasak.',
+    'khhjhhjhlwasaak.',
+    'kkjhhjhhlwaaask.',
+    '.kkhjhhjlwaakkk.',
+    '..kkkkhjlkkkk...',
+    '.....kkkkk......',
+    '................',
+    '................',
+  ],
+  plum: [
+    '................',
+    '................',
+    '................',
+    '...kkkkkkkk.....',
+    '.kkkppppppkkkkkk',
+    'kkppppqpppppkbbk',
+    'kppqqqpppppppkbk',
+    'kppqqpppppppppkk',
+    'ppppppppppppppk.',
+    'kpppppppppppPPk.',
+    'kpppppppppppPkk.',
+    'kkPPPPPPPPPPkk..',
+    '.kkkPPPPPPkkk...',
+    '...kkkkkkkk.....',
+    '................',
+    '................',
+  ],
+  orange: [
+    '........kkkkk...',
+    '......kkkgggk...',
+    '....kkkbgggGk...',
+    '..kkkffbggGkk...',
+    '.kkfffffffffkk..',
+    '.kfffvfffffffk..',
+    'kkffvvffffffokk.',
+    'kfffvffffffoook.',
+    'kfffffffffffook.',
+    'kfffffffffffook.',
+    'kffffffffffoook.',
+    'kkfffffffffookk.',
+    '.kffffffffoook..',
+    '.kkffoooooookk..',
+    '..kkkoooookkk...',
+    '....kkkkkkk.....',
+  ],
+  cherry: [
+    '.........kkkkkk.',
+    '........kkggggkk',
+    '.......kkbgggggk',
+    '.......kbbgggggg',
+    '......kkbbGGGGGk',
+    '....kkkbkbkkkkkk',
+    '...kkbbkkbbk....',
+    '...kbkkkkkbk....',
+    '.kkkbk...kbk....',
+    'kkrrrkkkkkbkkk..',
+    'krrrrrkkrrrrrk..',
+    'rrwwrrRrrwwrrkk.',
+    'rrwrrRRrrwrrRRk.',
+    'krrrRRkrrrrRRRk.',
+    'kkrRRkkkrrRRRkk.',
+    '.kkkkk.kkkRkkk..',
+  ],
+  seven: [
+    '................',
+    'kkkkkkkkkkkkkkkk',
+    'krnnnnnnnnnnnrRk',
+    'krrrrrrrrrrrrrRk',
+    'krrrrrrrrrrrrrRk',
+    'krrrrrrrrrrrrrRk',
+    'kkkkkkkkkkrrrRkk',
+    '........krrrRkk.',
+    '.......kkrrrRk..',
+    '......kkrrrRkk..',
+    '.....kkrrrRkk...',
+    '....kkrrrRkk....',
+    '....krrrRkk.....',
+    '...kkrrrRk......',
+    '...krrrRkk......',
+    '...kkkkkk.......',
+  ],
+  bell: [
+    '......kkkk......',
+    '.....kkYYkk.....',
+    '....kkyyYYkk....',
+    '...kkyyyyYYkk...',
+    '...kvvyyyyYYk...',
+    '...kvyyyyyYYk...',
+    '...kvyyyyyYYk...',
+    '...kvyyyyyyYk...',
+    '..kkvyyyyyyYkk..',
+    '..kvvyyyyyyYYk..',
+    '.kkvyyyyyyyyYkk.',
+    'kkvyyyyyyyyyyYkk',
+    'kvyyyyyyyyyyyyYk',
+    'kYYYYYYYYYYYYYYk',
+    'kkkkkkkYYkkkkkkk',
+    '......kkkk......',
+  ],
+  bar: [
+    '................',
+    '.....kkkkkk.....',
+    '....kkwwwwk.....',
+    '....kwwrrwk.....',
+    'kkkkkwrrrwkkkkkk',
+    'keyyewwrrweyyeek',
+    'keyeyewrrweyeyek',
+    'keyyeewrrweyyeek',
+    'keyeyewrrweyyeek',
+    'keyyeewrrweyeyek',
+    'kEYEEwwrrwwYEEEk',
+    'kkkkkwrrrRwkkkkk',
+    '....kwwwwwwk....',
+    '....kkkkkkkk....',
+    '................',
+    '................',
+  ],
+  bar2: [
+    '................',
+    '.....kkkkkk.....',
+    '....kkwwwwkk....',
+    '....kwwrrwwk....',
+    'kkkkkwrrrRwkkkkk',
+    'keyyewrwrRwyyeek',
+    'keyeywwwrRwyeyek',
+    'keyyewwrrwwyyeek',
+    'keyeywrrwweyyeek',
+    'keyyewrrwwwyeyek',
+    'kEYEEwrrrRwYEEEk',
+    'kkkkkwrrrRwkkkkk',
+    '....kwwwwwwk....',
+    '....kkkkkkkk....',
+    '................',
+    '................',
+  ],
+});
+// v4.3: TRIPLE 7 (Cherry Bonus reels) and BAR plates in the style of the Dyna screen: black plate, green B R, orange rim, candy-striped red numeral (24x24, own pixel art)
+Object.assign(SPR, {
+  seven3: [
+    '........................',
+    '....kkkkkkkkkkkkkkkk....',
+    '....krrrrrrrrrrrrrRk....',
+    '....krwwwwwwwwwwwrRk....',
+    '....krrrrrrrrrrrrrRk....',
+    '....krrrrrrrrrrrrrRk....',
+    '....kkkkkkkkkkkrrrRk....',
+    'kkkkkkkkkk....krrRkkkkkk',
+    'rrrrrrrrRk...kkrrRkrrrrR',
+    'rrrrrrrrRk...krrRkkrrrrR',
+    'rrrrrrrrRk..kkrrRkrrrrrR',
+    'kkkkkkrrRk..krrRkkkkkrrR',
+    '....kkrRkk.kkrrRk..kkrRk',
+    '....krRkk..krrRkk..krRkk',
+    '...kkrRk..kkrrRk..kkrRk.',
+    '...krRkk..krrRkk..krRkk.',
+    '..kkrRk..kkrrRk..kkrRk..',
+    '..krRkk..krrRkk..krRkk..',
+    '.kkrRk..kkrrRk..kkrRk...',
+    '.krRkk..krrRkk..krRkk...',
+    '.kkkk..kkrrRk...kkkk....',
+    '.......krrrRk...........',
+    '.......kkkkkk...........',
+    '........................',
+  ],
+  bar: [
+    '........................',
+    '........................',
+    '.........RRRRRR.........',
+    '.........RrrrwR.........',
+    '.......RRRrrwrR.........',
+    '.......RrrrwrrR.........',
+    'oooooooRRRwrrrRooooooooo',
+    'ommmmmmmmRrrrwRmmmmmmmmo',
+    'omKmmKKKKRrrwrRKKmmKKKmo',
+    'omKmmKKKKRrwrrRKKmmKKKmo',
+    'omKmKmKKKRwrrrRKKmKmKKmo',
+    'omKmKmKKKRrrrwRKKmKmKKmo',
+    'omKmmKKKKRrrwrRKKmmKKKmo',
+    'omKmmKKKKRrwrrRKKmmKKKmo',
+    'omKmKmKKKRwrrrRKKmmKKKmo',
+    'omKmKmKKKRrrrwRKKmmKKKmo',
+    'ommmmmmmmRrrwrRmmmmmmmmo',
+    'oooooooRRRrwrrRRRooooooo',
+    '.......RrrwrrrwrR.......',
+    '.......RrwrrrwrrR.......',
+    '.......RwrrrwrrrR.......',
+    '.......RRRRRRRRRR.......',
+    '........................',
+    '........................',
+  ],
+  bar2: [
+    '........................',
+    '........................',
+    '........RRRRRRRR........',
+    '........RwrrrwrR........',
+    '......RRRrrrwrrRRR......',
+    '......RwrrrRRrrwrR......',
+    'ooooooRRRRRRRrwrrRoooooo',
+    'ommmmmmmmmmmRwrrrRmmmmmo',
+    'omKmmKKKKKRRRrrrwRmKKKmo',
+    'omKmmKKKKKRwrrrRRRmKKKmo',
+    'omKmKmKKRRRrrrwRKmKmKKmo',
+    'omKmKmKKRwrrrRRRKmKmKKmo',
+    'omKmmKKKRrrrwRKKKmmKKKmo',
+    'omKmmKRRRrrwrRKKKmmKKKmo',
+    'omKmKmRrrrwRRRKKKmmKKKmo',
+    'omKmKmRrrwrRKKKKKmmKKKmo',
+    'ommmmmRrwrrRmmmmmmmmmmmo',
+    'ooooooRwrrrRRRRRRRoooooo',
+    '......RrrrwrrrwrrR......',
+    '......RrrwrrrwrrrR......',
+    '......RrwrrrwrrrwR......',
+    '......RRRRRRRRRRRR......',
+    '........................',
+    '........................',
+  ],
+  bar3: [
+    '........................',
+    '........................',
+    '......RRRRRRRRRR........',
+    '......RrrwrrrwrR........',
+    '......RrwrrrwrrRRR......',
+    '......RwrrrwrrrwrR......',
+    'ooooooRRRRRRRrwrrRoooooo',
+    'ommmmmmmmmmmRwrrrRmmmmmo',
+    'omKmmKKKRRRRRrrrwRmKKKmo',
+    'omKmmKKKRrrwrrrRRRmKKKmo',
+    'omKmKmKKRrwrrrwRRRKmKKmo',
+    'omKmKmKKRwrrrwrrrRKmKKmo',
+    'omKmmKKKRRRRRrrrwRmKKKmo',
+    'omKmmKKKKKKKRrrwrRmKKKmo',
+    'omKmKmKKKKKKRrwrrRmKKKmo',
+    'omKmKmKKKKKKRwrrrRmKKKmo',
+    'ommmmmRRRRmmRrrrwRmmmmmo',
+    'ooooooRwrRRRRrrwrRoooooo',
+    '......RrrrwrrrwrrR......',
+    '......RrrwrrrwrrrR......',
+    '......RrwrrrwrrRRR......',
+    '......RRRRRRRRRR........',
+    '........................',
+    '........................',
+  ],
+});
+// SUPER BAR (1 BAR BONUS only): red plate with gold BAR letters under a gold "SUPER" band (word drawn as text)
+SPR.superbar = ['kkkkkkkkkkkkkkkk', 'kyyyyyyyyyyyyyyk', 'kyyyyyyyyyyyyyyk', 'kyyyyyyyyyyyyyyk', 'kYYYYYYYYYYYYYYk', 'kkkkkkkkkkkkkkkk', ...barPlate('r', 'R'), '................', '................', '................'];
+SPR.blank = Array(16).fill('................');
+let BLANK_TINT = '#ffe0ea';
+const SPRITE_CACHE = {};
+function spriteCanvas(id, dim) {
+  const key = id + (dim ? ':d' : ''); if (SPRITE_CACHE[key]) return SPRITE_CACHE[key];
+  const rows = SPR[id], c = document.createElement('canvas'); let N; N = rows.length; c.width = c.height = N; const x = c.getContext('2d');
+  let x0 = N, y0 = N, x1 = -1, y1 = -1;
+  rows.forEach((row, y) => [...row].forEach((ch, xx) => { if (ch !== '.') { x0 = Math.min(x0, xx); x1 = Math.max(x1, xx); y0 = Math.min(y0, y); y1 = Math.max(y1, y); } }));
+  const ox = Math.floor((N - (x1 - x0 + 1)) / 2) - x0, oy = Math.floor((N - (y1 - y0 + 1)) / 2) - y0; // center by bounding box
+  rows.forEach((row, y) => [...row].forEach((ch, xx) => { if (ch === '.') return; let col = PAL[ch] || '#f0f'; x.fillStyle = col; x.fillRect(xx + ox, y + oy, 1, 1); }));
+  if (dim) { x.globalCompositeOperation = 'source-atop'; x.fillStyle = 'rgba(40,30,70,.62)'; x.fillRect(0, 0, N, N); }
+  return (SPRITE_CACHE[key] = c);
+}
+function drawSprite(ctx, id, cx, cy, size, { dim = false, stretch = 1, alpha = 1 } = {}) {
+  if (id === 'blank') { ctx.save(); ctx.globalAlpha = alpha; ctx.fillStyle = BLANK_TINT; const h = 24 * stretch; ctx.fillRect(cx - 12, cy - h / 2, 24, h); ctx.fillStyle = 'rgba(255,255,255,.35)'; ctx.fillRect(cx - 12, cy - h / 2, 24, h * .2); ctx.restore(); return; }
+  const c = spriteCanvas(id, dim); ctx.save(); ctx.imageSmoothingEnabled = false; ctx.globalAlpha = alpha;
+  ctx.drawImage(c, cx - size / 2, cy - size * stretch / 2, size, size * stretch);
+  if (id === 'superbar') { ctx.fillStyle = '#9b0010'; ctx.font = `700 ${size * .2}px Fredoka, sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('SUPER', cx, cy - size * .275 * stretch); }
+  if (id === 'wild') { ctx.fillStyle = '#fff'; ctx.strokeStyle = '#5a0040'; ctx.lineWidth = size * .05; ctx.font = `700 ${size * .26}px Fredoka, sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.strokeText('IQ', cx, cy + size * .06 * stretch); ctx.fillText('IQ', cx, cy + size * .06 * stretch); }
+  ctx.restore();
+}
+
+// ===== procedural arcade SFX / jingles (original compositions, square + noise like a 1991 PSG board) =====
+const Sfx = {
+  ctx: null, on: true, master: null,
+  unlock() { if (this.ctx) { if (this.ctx.state === 'suspended') this.ctx.resume(); return; } try { this.ctx = new (window.AudioContext || window.webkitAudioContext)(); this.master = this.ctx.createGain(); this.master.gain.value = .22; this.master.connect(this.ctx.destination); } catch (e) {} },
+  tone(f, t0, d, { type = 'square', v = .5, slide = 0 } = {}) { const a = this.ctx; if (!a || !this.on) return; const o = a.createOscillator(), g = a.createGain(), t = a.currentTime + t0; o.type = type; o.frequency.setValueAtTime(f, t); if (slide) o.frequency.exponentialRampToValueAtTime(Math.max(30, f * slide), t + d); g.gain.setValueAtTime(v, t); g.gain.setValueAtTime(v * .7, t + d * .7); g.gain.linearRampToValueAtTime(0, t + d); o.connect(g); g.connect(this.master); o.start(t); o.stop(t + d + .02); },
+  noise(t0, d, v = .3, hp = 1200) { const a = this.ctx; if (!a || !this.on) return; const n = Math.floor(a.sampleRate * d), b = a.createBuffer(1, n, a.sampleRate), x = b.getChannelData(0); for (let i = 0; i < n; i++) x[i] = Math.random() * 2 - 1; const s = a.createBufferSource(), f = a.createBiquadFilter(), g = a.createGain(), t = a.currentTime + t0; s.buffer = b; f.type = 'highpass'; f.frequency.value = hp; g.gain.setValueAtTime(v, t); g.gain.exponentialRampToValueAtTime(.001, t + d); s.connect(f); f.connect(g); g.connect(this.master); s.start(t); },
+  seq(notes, step = .07, opt) { notes.forEach((m, i) => m && this.tone(440 * 2 ** ((m - 69) / 12), i * step, step * .9, opt)); },
+  coin() { this.seq([84, 91], .06); }, bet() { this.tone(1320, 0, .04, { v: .35 }); }, start() { this.tone(220, 0, .12, { slide: 2 }); this.noise(0, .08, .15); },
+  tick() { this.tone(1800, 0, .012, { v: .12 }); }, stop() { this.tone(160, 0, .07, { v: .5, slide: .5 }); this.noise(0, .05, .2, 600); },
+  win(n) { const k = Math.min(5, 1 + Math.floor(Math.log2(1 + n / 10))); this.seq([72, 76, 79, 84, 79, 84, 88, 91].slice(0, 3 + k), .075); },
+  count() { this.tone(2093, 0, .02, { v: .15 }); }, lose() { this.seq([64, 60, 55], .12, { type: 'triangle', v: .5 }); },
+  bonus() { this.seq([72, 0, 72, 76, 79, 0, 79, 84, 88, 84, 88, 91, 96], .085); }, flip() { this.noise(0, .06, .2, 3000); this.tone(990, 0, .03, { v: .2 }); },
+  wupWin() { this.seq([79, 84, 88, 91], .07); }, tie() { this.seq([72, 72], .1); },
+};
+
+// ===== CHERRY CLASSIC '91 — app (screen 320x240 logical, drawn at 4x) =====
+const $ = id => document.getElementById(id);
+const SAVE_KEY = 'cherryclassic91.v1';
+const OP_DEFAULT = { rate: 85, dup: true, seven: 'loss', dupRate: 90, cond: '12-7-1', minBet: 16, maxBet: 64, speed: 'normal', skillStop: true };
+let save = { credits: 100, bet: 8, meters: { cherry: 0, bell: 0 }, pool: 0, hist: [], op: { ...OP_DEFAULT }, sound: true, games: 0 };
+try { const s = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null'); if (s) { save = Object.assign({}, save, s); save.op = Object.assign({}, OP_DEFAULT, s.op); save.meters = Object.assign({ cherry: 0, bell: 0 }, s.meters); } } catch (e) {}
+function persist() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch (e) {} }
+let TS = 1; // test time scale
+const K = 4, cv = $('scr'), ctx = cv.getContext('2d'); ctx.imageSmoothingEnabled = false;
+// ---- reel motion measured from the original cabinet: 15 symbols/s, stepped halving stop (1/2,1/4,1/8 speed) over 1.068 s ----
+const MOTION = { v: 15, Ta: .08, Td: 1.068, k: 1 / 4 };
+const SPEED = { normal: { base: 1.4, stag: .6 }, fast: { base: .9, stag: .3 } };
+const ORDER = [3, 4, 5, 0, 1, 2, 6, 7, 8]; // stop order: middle row L→R, top row, bottom row
+const WX = [84, 163, 242], WY = [12, 72, 132], WW = 68, WH = 54, PITCH = 40, SYM = 34;
+const BG = { main: '#d6d2f6', cherry: '#fe86fe', bell: '#ffe680', bar: '#8ec8ff' };
+function decelFrac(u) { return 4 * (.5 * Math.min(u, .25) + .25 * clamp(u - .25, 0, .25) + .125 * clamp(u - .5, 0, .5)); }
+function travel(W, t) { const tau = t - W.delay; if (tau <= 0) return 0; if (tau < MOTION.Ta) return MOTION.v * tau * tau / (2 * MOTION.Ta); let d = MOTION.v * (Math.min(t, W.tD) - W.delay - MOTION.Ta / 2); if (t > W.tD) d += MOTION.v * MOTION.Td * MOTION.k * decelFrac(Math.min(1, (t - W.tD) / MOTION.Td)); return d; }
+function wPos(W, now) { if (!W.spinning) return W.L; const t = (now - W.t0) / 1000 * TS; return t >= W.tD + MOTION.Td ? W.L : W.P0 - travel(W, t); }
+const G = { phase: 'idle', grid: null, wins: [], win: 0, ev: null, mode: 'main', bonus: null, queue: [], wup: null, msg: '', msgT: 0, forced: null, forcedCard: null, rng: mulberry(Date.now() % 1e9), vis: mulberry(12345), W: [], blink: 0, stopLog: [], spinT0: 0 };
+// initial windows
+for (let i = 0; i < 9; i++) { const st = {}; for (let k = -1; k <= 1; k++) st[k] = pick(G.vis, REELS.main); G.W.push({ strip: st, L: 0, spinning: false }); }
+G.grid = [0, 1, 2].map(r => [0, 1, 2].map(c => G.W[r * 3 + c].strip[0]));
+const lb = () => lineBets(save.bet);
+function msg(s, ms = 0) { G.msg = s; G.msgT = ms ? performance.now() + ms : 0; }
+// ---------- drawing ----------
+function txt(s, x, y, size, col, align = 'left', font = 'bold') { ctx.font = `${font} ${size}px "Courier New",monospace`; ctx.textAlign = align; ctx.textBaseline = 'top'; ctx.fillStyle = col; ctx.fillText(s, x, y); }
+function otxt(s, x, y, size, col, out = '#000', align = 'left') { ctx.font = `bold ${size}px "Courier New",monospace`; ctx.textAlign = align; ctx.textBaseline = 'top'; ctx.lineWidth = 1.6; ctx.strokeStyle = out; ctx.strokeText(s, x, y); ctx.fillStyle = col; ctx.fillText(s, x, y); }
+function box(x, y, w, h, col) { ctx.fillStyle = col; ctx.fillRect(x, y, w, h); }
+function frame(x, y, w, h, c1 = '#1aa8a0', c2 = '#0a4a46') { ctx.strokeStyle = c2; ctx.lineWidth = 3; ctx.strokeRect(x - 1.5, y - 1.5, w + 3, h + 3); ctx.strokeStyle = c1; ctx.lineWidth = 1.6; ctx.strokeRect(x - 1.5, y - 1.5, w + 3, h + 3); }
+function mini(id, x, y, s = 9) { drawSprite(ctx, id, x, y, s); }
+function drawPanel(now) {
+  const cond = CONDITIONS[save.op.cond], op = save.op, bm = G.bonus && G.bonus.mode, fl = Math.floor(now / 250) % 2;
+  // title (own wordmark, not the manufacturer logo)
+  ctx.save(); ctx.transform(1, 0, -.25, 1, 0, 0); otxt('CHERRY', 9, 4, 11, '#5aa8ff', '#002a80'); ctx.restore(); otxt("CLASSIC '91", 4, 15, 7, '#ffe75a', '#5a3a00');
+  frame(4, 25, 62, 52, '#c8c8c8', '#444'); box(4, 25, 62, 52, '#000');
+  box(5, 26, 60, 10, bm === 'cherry' && fl ? '#fff' : '#e8304a'); txt('Cherry Bonus', 35, 27, 7.5, bm === 'cherry' && fl ? '#e8304a' : '#fff', 'center');
+  txt('LAST', 6, 39, 7, '#fff'); box(25, 38, 14, 9, '#ffe75a'); txt(String(cond[0] - save.meters.cherry), 32, 39, 7.5, '#000', 'center'); txt('TIMES', 41, 39, 7, '#fff');
+  txt('OF', 6, 50, 7, '#fff'); mini('cherry', 22, 53); mini('cherry', 32, 53); txt('-', 42, 49, 7, '#e8304a');
+  txt('OR', 6, 60, 6.5, '#fff'); txt('1X', 6, 68, 7, '#fff'); mini('cherry', 24, 71); mini('cherry', 34, 71); mini('cherry', 44, 71);
+  txt('MIN. BET', 6, 80, 7, '#fff'); txt(String(op.minBet), 50, 80, 7.5, '#ff4040'); txt('FOR ANY BONUS', 4, 89, 6.2, '#fff');
+  frame(4, 99, 62, 44, '#c8c8c8', '#444'); box(4, 99, 62, 44, '#000');
+  box(5, 100, 60, 10, bm === 'bell' && fl ? '#fff' : '#ffd21a'); txt('Bell  Bonus', 35, 101, 7.5, '#000', 'center');
+  txt('AND POOL TAKE', 35, 112, 6, '#ffe75a', 'center'); txt('LAST', 6, 121, 7, '#fff'); box(25, 120, 14, 9, '#ffe75a'); txt(String(cond[1] - save.meters.bell), 32, 121, 7.5, '#000', 'center'); txt('TIMES', 41, 121, 7, '#fff');
+  txt('OF', 6, 133, 7, '#fff'); mini('bell', 26, 136); mini('bell', 37, 136); mini('bell', 48, 136);
+  frame(4, 149, 62, 30, '#c8c8c8', '#444'); box(4, 149, 62, 30, '#000');
+  box(5, 150, 60, 10, bm === 'bar' && fl ? '#ffe75a' : '#e8e8e8'); txt('1 Bar Bonus', 35, 151, 7.5, '#000', 'center');
+  txt('1X', 6, 165, 7, '#fff'); mini('bar', 25, 169, 11); mini('bar', 37, 169, 11); mini('bar', 49, 169, 11);
+}
+function lineCells(i) { return LINES[i].map(([r, c]) => [WX[c] + WW / 2, WY[r] + WH / 2]); }
+function drawReels(now) {
+  const mode = G.mode, bg = BG[mode];
+  // outer frame
+  frame(78, 6, 238, 184, '#1aa8a0', '#063a36'); box(78, 6, 238, 184, '#04121a');
+  // red connectors
+  ctx.strokeStyle = '#d01818'; ctx.lineWidth = 1.4;
+  for (let r = 0; r < 3; r++) for (let c = 0; c < 2; c++) { const y = WY[r] + WH / 2; ctx.beginPath(); ctx.moveTo(WX[c] + WW, y); ctx.lineTo(WX[c + 1], y); ctx.stroke(); }
+  for (let c = 0; c < 3; c++) for (let r = 0; r < 2; r++) { const x = WX[c] + WW / 2; ctx.beginPath(); ctx.moveTo(x, WY[r] + WH); ctx.lineTo(x, WY[r + 1]); ctx.stroke(); }
+  [[WX[0] + WW, WY[0] + WH, WX[1], WY[1]], [WX[1] + WW, WY[1] + WH, WX[2], WY[2]], [WX[0] + WW, WY[2], WX[1], WY[1] + WH], [WX[1] + WW, WY[1], WX[2], WY[0] + WH]].forEach(([a, b, c, d]) => { ctx.beginPath(); ctx.moveTo(a, b); ctx.lineTo(c, d); ctx.stroke(); });
+  for (let w = 0; w < 9; w++) {
+    const r = Math.floor(w / 3), c = w % 3, x = WX[c], y = WY[r], W = G.W[w];
+    frame(x, y, WW, WH); const g = ctx.createLinearGradient(0, y, 0, y + WH); g.addColorStop(0, shade(bg, -.35)); g.addColorStop(.18, bg); g.addColorStop(.82, bg); g.addColorStop(1, shade(bg, -.35)); ctx.fillStyle = g; ctx.fillRect(x, y, WW, WH);
+    ctx.save(); ctx.beginPath(); ctx.rect(x, y, WW, WH); ctx.clip();
+    const pos = wPos(W, now), i0 = Math.floor(pos) - 2;
+    for (let i = i0; i <= i0 + 4; i++) { const s = W.strip[i]; if (!s || s === 'blank') continue; const yy = Math.round((y + WH / 2 + (i - pos) * PITCH) * K) / K; drawSprite(ctx, s, x + WW / 2, yy, s.startsWith('bar') || s === 'superbar' ? SYM * 1.08 : SYM); }
+    ctx.restore();
+  }
+  // win highlight
+  if (G.phase === 'collect' && G.wins.length && Math.floor(now / 300) % 2 === 0) {
+    ctx.strokeStyle = '#ffe75a'; ctx.lineWidth = 2.2;
+    for (const wi of G.wins) { const P = lineCells(wi.line); ctx.beginPath(); ctx.moveTo(P[0][0], P[0][1]); ctx.lineTo(P[2][0], P[2][1]); ctx.stroke();
+      for (let k = 0; k < wi.cells; k++) { const [r, c] = LINES[wi.line][k]; ctx.strokeRect(WX[c] + 1, WY[r] + 1, WW - 2, WH - 2); } }
+  }
+  // line tabs: 4 6 7 8 on top, 2 1 3 left, 5 bottom-left
+  const B = lb(), won = new Set(G.phase === 'collect' ? G.wins.map(w => w.line) : []), fl = Math.floor(now / 300) % 2;
+  const tab = (n, x, y) => { const on = B[n - 1] > 0, hot = won.has(n - 1) && fl; box(x, y, 9, 8, hot ? '#ff3030' : on ? '#ffd21a' : '#5a5a3a'); txt(String(n), x + 4.5, y + .5, 7.5, '#000', 'center'); };
+  tab(4, 69, 0); tab(6, WX[0] + 28, 0); tab(7, WX[1] + 28, 0); tab(8, WX[2] + 28, 0);
+  tab(2, 68, WY[0] + 23); tab(1, 68, WY[1] + 23); tab(3, 68, WY[2] + 23); tab(5, 69, 186);
+}
+function shade(hex, f) { const n = parseInt(hex.slice(1), 16), ch = [n >> 16, n >> 8 & 255, n & 255].map(v => Math.round(clamp(f < 0 ? v * (1 + f) : v + (255 - v) * f, 0, 255))); return `rgb(${ch})`; }
+const SUITS = ['♠', '♥', '♦', '♣'], RANKS = ['', 'A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
+function drawCard(card, x, y, w, h, back) {
+  box(x - 1, y - 1, w + 2, h + 2, '#000'); box(x, y, w, h, back ? '#1d3fb8' : '#fff');
+  if (back) { ctx.strokeStyle = '#8fb0ff'; ctx.lineWidth = .8; for (let k = -h; k < w; k += 5) { ctx.beginPath(); ctx.moveTo(x + k, y); ctx.lineTo(x + k + h, y + h); ctx.stroke(); } ctx.strokeStyle = '#fff'; ctx.strokeRect(x + 2, y + 2, w - 4, h - 4); return; }
+  if (!card.rank) { txt('JOKER', x + w / 2, y + h / 2 - 5, Math.min(10, w / 4), '#8a00c0', 'center'); return; }
+  const col = card.suit === 1 || card.suit === 2 ? '#d01818' : '#000';
+  txt(RANKS[card.rank], x + 2, y + 2, Math.min(12, w / 3.2), col); txt(SUITS[card.suit], x + w / 2, y + h / 2 - w / 5, w / 2.4, col, 'center', 'normal');
+}
+function drawWup(now) {
+  const U = G.wup; box(80, 8, 234, 180, '#0b5a2a'); frame(80, 8, 234, 180, '#1aa8a0', '#063a36');
+  otxt('DOUBLE UP', 194, 12, 12, '#ffe75a', '#5a3a00', 'center');
+  otxt('BIG', 110, 52, 11, U.stage === 'guess' ? '#fff' : '#9fd', '#000', 'center'); txt('8 - K', 110, 66, 7, '#cfe'); otxt('SMALL', 278, 52, 11, U.stage === 'guess' ? '#fff' : '#9fd', '#000', 'center'); txt('A - 6', 278, 66, 7, '#cfe');
+  drawCard(U.card, 172, 40, 44, 62, !U.card || (U.flipT && now < U.flipT));
+  txt(`7 = ${save.op.seven === 'tie' ? 'EVEN' : 'LOSE'} · JOKER LOSES`, 194, 108, 6.5, '#cfe', 'center');
+  txt('LAST 5 DATA', 194, 122, 7, '#ffe75a', 'center');
+  save.hist.slice(-5).forEach((c, i, a) => drawCard(c, 194 - a.length * 12 + i * 24 + 2, 132, 20, 28, false));
+  otxt(`DOUBLE UP ${U.amt}`, 194, 168, 9, '#fff', '#000', 'center');
+}
+function drawBottom(now) {
+  txt('CREDIT', 10, 196, 9, '#fff'); txt(String(save.credits), 66, 208, 14, '#fff', 'right');
+  txt('POOL', 236, 196, 9, '#8ec8ff'); txt(String(save.pool), 268, 208, 14, '#8ec8ff', 'right');
+  txt('BET', 290, 196, 9, '#ff3030'); txt(String(save.bet).padStart(2, '0'), 314, 208, 14, '#ff3030', 'right');
+  let m = G.msg; if (G.msgT && now > G.msgT) { G.msg = ''; G.msgT = 0; m = ''; }
+  if (!m) m = G.phase === 'spin' ? '' : save.credits < 1 && !G.bonus ? (Math.floor(now / 600) % 2 ? 'INSERT COIN' : '') : G.bonus ? `${{ cherry: 'CHERRY', bell: 'BELL', bar: '1 BAR' }[G.bonus.mode]} BONUS` : 'PRESS START';
+  txt(m, 160, 206, 12, '#fff', 'center');
+  if (G.win && (G.phase === 'collect' || G.phase === 'count')) txt(`WIN ${G.win}`, 160, 222, 9, '#ffe75a', 'center');
+  if (G.bonus) txt(G.bonus.mode === 'cherry' ? 'CHERRY BONUS GAME' : `FREE GAME ${Math.min(FREE_GAMES, G.bonus.done + (G.phase === 'spin' ? 1 : 0))}/${FREE_GAMES} · ${G.bonus.total}`, 160, 231, 6.5, '#ffd21a', 'center');
+}
+function render(now) {
+  ctx.setTransform(K, 0, 0, K, 0, 0); ctx.imageSmoothingEnabled = false; box(0, 0, 320, 240, '#000');
+  drawPanel(now); if (G.phase === 'wup') drawWup(now); else drawReels(now); drawBottom(now);
+}
+// ---------- spin ----------
+function buildWindows(grid, mode, now) {
+  const sp = SPEED[save.op.speed] || SPEED.normal, M = MOTION;
+  G.W = G.W.map((old, w) => {
+    const r = Math.floor(w / 3), c = w % 3, o = ORDER.indexOf(w), tStop = sp.base + o * sp.stag, tD = tStop - M.Td, raw = M.v * (tD - M.Ta / 2) + M.v * M.Td * M.k, P0 = Math.max(4, Math.floor(raw)), delay = Math.max(0, (raw - P0) / M.v), st = {};
+    st[-1] = pick(G.vis, REELS[mode]); st[0] = grid[r][c]; for (let i = 1; i < P0 - 1; i++) st[i] = pick(G.vis, REELS[mode]);
+    for (let k = -1; k <= 1; k++) st[P0 + k] = old.strip[old.L + k] || pick(G.vis, REELS[mode]);
+    return { strip: st, P0, L: 0, delay, tD, t0: now, spinning: true, stopAt: now + tStop * 1000 / TS, o };
+  });
+}
+function quickStop(w, delay = 0) { // keep cruising to the nearest slot still out of sight, then the same halving stop
+  const W = G.W[w]; if (!W || !W.spinning || W.qs) return false; const now = performance.now(), t = (now - W.t0) / 1000 * TS + delay, te = Math.max(t, W.delay + MOTION.Ta);
+  if (te >= W.tD) return false; const p = W.P0 - travel(W, te), Dd = MOTION.v * MOTION.Td * MOTION.k, L = Math.floor(p - Dd), tD2 = te + (p - L - Dd) / MOTION.v;
+  if (tD2 >= W.tD) return false; const r = Math.floor(w / 3), c = w % 3; W.strip[L] = G.grid[r][c]; W.strip[L - 1] = pick(G.vis, REELS[G.mode]); W.strip[L + 1] = pick(G.vis, REELS[G.mode]);
+  W.L = L; W.tD = tD2; W.qs = true; W.stopAt = W.t0 + (tD2 + MOTION.Td) * 1000 / TS; return true;
+}
+function stopCol(c) { if (G.phase !== 'spin' || !save.op.skillStop) return false; for (const w of ORDER) if (w % 3 === c && quickStop(w)) return true; return false; }
+function stopAll() { if (G.phase !== 'spin' || !save.op.skillStop) return false; let k = 0, any = false; for (const w of ORDER) if (quickStop(w, k * .1)) { k++; any = true; } return any; }
+function startSpin() {
+  if (G.phase !== 'idle') return; Sfx.unlock(); const B = G.bonus;
+  if (!B) {
+    if (save.credits < 1) { msg('INSERT COIN', 1500); return; }
+    if (save.bet > save.credits) save.bet = save.credits; if (save.bet < 1) save.bet = 1;
+    save.credits -= save.bet; save.games++;
+  } else if (B.done >= B.games) return;
+  let grid, ev; const L = lb();
+  if (B) { grid = G.forced || rollGrid(G.rng, B.mode); ev = evalGrid(grid, L, B.mode); }
+  else if (G.forced) { grid = G.forced; ev = evalGrid(grid, L); } else ({ grid, ev } = mainSpin(G.rng, save.op, L));
+  G.forced = null; G.grid = grid; G.ev = ev; G.wins = []; G.win = 0; G.stopLog = []; G.spinT0 = performance.now();
+  buildWindows(grid, G.mode, performance.now()); G.phase = 'spin'; msg(''); Sfx.start(); persist(); ui();
+}
+function update(now) {
+  if (G.phase !== 'spin') return; let all = true;
+  for (let w = 0; w < 9; w++) { const W = G.W[w]; if (!W.spinning) continue; if (now >= W.stopAt) { W.spinning = false; G.stopLog.push(w); Sfx.stop(); } else all = false; }
+  if (!all && now - (G.lastTick || 0) > 66) { G.lastTick = now; Sfx.tick(); }
+  if (all) settle();
+}
+function settle() {
+  const ev = G.ev, B = G.bonus; G.wins = ev.wins; G.win = ev.sum;
+  if (!B) { const q = applyMeters(save, ev, save.op); G.queue.push(...q); }
+  else { B.done++; B.total += ev.sum; }
+  persist();
+  if (G.win > 0) { Sfx.win(G.win); const parts = []; if (ev.allFruit) parts.push(`ALL FRUIT ${ev.allFruit}`); if (ev.sevensPay) parts.push(`${ev.sevens} SEVENS ${ev.sevensPay}`); if (ev.bellPay) parts.push(`${ev.bells} BELLS ${ev.bellPay}`);
+    if (B || !save.op.dup) { G.phase = 'collect'; msg(parts[0] || `WIN ${G.win}`); ui(); setTimeout(() => take(), 1400 / TS); }
+    else { G.phase = 'collect'; msg(parts[0] || 'TAKE OR D-UP'); ui(); } }
+  else { if (B && B.mode === 'cherry') msg('NO SEVENS', 1200); afterRound(); }
+}
+function take() {
+  if (G.phase !== 'collect') return; const amt = G.win; G.phase = 'count'; ui(); let left = amt; const step = Math.max(1, Math.ceil(amt / 25));
+  const iv = setInterval(() => { const d = Math.min(step, left); left -= d; save.credits += d; Sfx.count(); if (left <= 0) { clearInterval(iv); G.win = 0; persist(); afterRound(); } }, 30 / TS);
+}
+function afterRound() {
+  G.phase = 'idle'; const B = G.bonus;
+  if (B) { if (B.done < B.games) { msg(B.mode === 'cherry' ? 'PRESS START' : `FREE GAME ${B.done + 1}/${FREE_GAMES} · START`); ui(); return; }
+    msg(`BONUS TOTAL ${B.total}`, 2500); G.bonus = null; G.mode = 'main'; }
+  if (G.queue.length) { const m = G.queue.shift(); startBonus(m); return; }
+  if (!G.msg) msg(''); ui();
+}
+function startBonus(mode) {
+  G.bonus = { mode, games: mode === 'cherry' ? 1 : FREE_GAMES, done: 0, total: 0 }; G.mode = mode; Sfx.bonus();
+  if (mode === 'bell') { const p = save.pool; save.pool = 0; save.credits += p; G.bonus.total += p; msg(`POOL TAKE ${p}`, 2500); }
+  else msg(mode === 'cherry' ? 'CHERRY BONUS!' : '1 BAR BONUS!', 2500);
+  G.phase = 'idle'; persist(); ui();
+}
+// ---------- W-UP ----------
+function wupStart() { if (G.phase !== 'collect' || G.bonus || !save.op.dup) return; G.phase = 'wup'; G.wup = { amt: G.win, stage: 'guess', card: null }; msg('BIG OR SMALL ?'); Sfx.flip(); ui(); }
+function wupGuess(g) {
+  const U = G.wup; if (G.phase !== 'wup' || U.stage !== 'guess') return; const J = WUP_JOKERS[save.op.seven][save.op.dupRate];
+  const card = G.forcedCard || wupDraw(G.rng, J); G.forcedCard = null; U.card = card; U.flipT = performance.now() + 350 / TS; U.stage = 'reveal'; Sfx.flip(); ui();
+  setTimeout(() => { const res = wupJudge(card, g, save.op.seven); save.hist.push(card); save.hist = save.hist.slice(-5); U.res = res;
+    if (res === 'win') { U.amt *= 2; U.stage = 'result'; msg(`WIN ${U.amt} · TAKE OR D-UP`); Sfx.wupWin(); }
+    else if (res === 'tie') { U.stage = 'result'; msg(`EVEN ${U.amt} · TAKE OR D-UP`); Sfx.tie(); }
+    else { U.amt = 0; U.stage = 'over'; msg('LOSE', 1500); Sfx.lose(); setTimeout(() => { G.wup = null; G.win = 0; afterRound(); }, 1500 / TS); }
+    persist(); ui(); }, 450 / TS);
+}
+function wupTake() { const U = G.wup; if (G.phase !== 'wup' || U.stage !== 'result') return; G.win = U.amt; G.wup = null; G.phase = 'collect'; G.wins = []; take(); }
+function wupAgain() { const U = G.wup; if (G.phase !== 'wup' || U.stage !== 'result') return; U.stage = 'guess'; U.card = null; msg('BIG OR SMALL ?'); Sfx.flip(); ui(); }
+// ---------- buttons ----------
+function betUp() { if (G.phase !== 'idle' || G.bonus) return; Sfx.unlock(); let b = save.bet + 1; if (b > save.op.maxBet || b > Math.max(1, save.credits)) b = 1; save.bet = b; Sfx.bet(); persist(); ui(); }
+function coin() { Sfx.unlock(); save.credits = Math.min(999999, save.credits + 100); Sfx.coin(); persist(); msg('FUN CREDITS +100', 1200); ui(); }
+const ACT = {
+  b1: () => G.phase === 'spin' ? stopCol(0) : G.phase === 'collect' ? take() : G.phase === 'wup' ? wupTake() : 0,
+  b2: () => G.phase === 'spin' ? stopCol(1) : G.phase === 'wup' ? wupGuess('big') : 0,
+  b3: () => G.phase === 'spin' ? stopCol(2) : G.phase === 'wup' ? wupGuess('small') : 0,
+  b4: () => G.phase === 'spin' ? stopAll() : G.phase === 'collect' ? wupStart() : G.phase === 'wup' ? wupAgain() : 0,
+  bBet: () => betUp(),
+  bStart: () => G.phase === 'idle' ? startSpin() : G.phase === 'spin' ? stopAll() : G.phase === 'collect' ? take() : G.phase === 'wup' && G.wup.stage === 'result' ? wupTake() : 0,
+  bCoin: () => coin(),
+  bSvc: () => { if (G.phase !== 'idle' || G.bonus) return; renderSvc(); $('svc').classList.add('on'); },
+  bSnd: () => { save.sound = !save.sound; Sfx.on = save.sound; persist(); ui(); },
+};
+for (const id in ACT) { const el = $(id); el.addEventListener('pointerdown', e => { e.preventDefault(); Sfx.unlock(); el.classList.add('dn'); ACT[id](); }); el.addEventListener('pointerup', () => el.classList.remove('dn')); el.addEventListener('pointerleave', () => el.classList.remove('dn')); }
+addEventListener('keydown', e => { const m = { KeyZ: 'b1', Digit1: 'b1', KeyX: 'b2', Digit2: 'b2', KeyC: 'b3', Digit3: 'b3', KeyV: 'b4', KeyD: 'b4', KeyB: 'bBet', Space: 'bStart', Enter: 'bStart', KeyT: 'b1' }[e.code]; if (m && !$('svc').classList.contains('on')) { e.preventDefault(); if (!e.repeat) ACT[m](); } });
+function ui() {
+  const ph = G.phase, w = G.wup, sp = ph === 'spin' && save.op.skillStop, set = (id, label, on, lit) => { const el = $(id); el.innerHTML = label; el.classList.toggle('off', !on); el.classList.toggle('lit', !!lit); };
+  set('b1', 'STOP 1<br>TAKE', sp || ph === 'collect' || (ph === 'wup' && w.stage === 'result'), ph === 'collect');
+  set('b2', 'STOP 2<br>BIG', sp || (ph === 'wup' && w.stage === 'guess'), ph === 'wup' && w.stage === 'guess');
+  set('b3', 'STOP 3<br>SMALL', sp || (ph === 'wup' && w.stage === 'guess'), ph === 'wup' && w.stage === 'guess');
+  set('b4', 'STOP ALL<br>D-UP', sp || (ph === 'collect' && save.op.dup && !G.bonus) || (ph === 'wup' && w.stage === 'result'), ph === 'collect' && save.op.dup && !G.bonus);
+  set('bBet', `BET<br>${save.bet}`, ph === 'idle' && !G.bonus); set('bStart', G.bonus && ph === 'idle' ? 'START<br>FREE' : 'START', ph === 'idle' || sp || ph === 'collect', ph === 'idle' && !!G.bonus);
+  $('bSnd').textContent = save.sound ? 'SOUND ON' : 'SOUND OFF'; Sfx.on = save.sound;
+}
+// ---------- service menu (DIP switches as documented for the original board, our mapping) ----------
+const SV = [
+  { k: 'rate', label: 'DSW1 MAIN GAME RATE', vals: RATES, fmt: v => v + '%' },
+  { k: 'dup', label: 'DSW1 DOUBLE UP', vals: [true, false], fmt: v => v ? 'ON' : 'OFF' },
+  { k: 'seven', label: 'DSW1 D-UP "7"', vals: ['loss', 'tie'], fmt: v => v === 'loss' ? 'LOSE' : 'EVEN' },
+  { k: 'dupRate', label: 'DSW1 D-UP RATE', vals: [90, 80], fmt: v => v + '%' },
+  { k: 'cond', label: 'DSW2 BONUS CONDITION', vals: Object.keys(CONDITIONS), fmt: v => v },
+  { k: 'minBet', label: 'DSW2 MIN. BET FOR BONUS', vals: [16, 8], fmt: v => v },
+  { k: 'maxBet', label: 'DSW2 MAX BET', vals: [64, 32, 16, 8], fmt: v => v },
+  { k: 'speed', label: 'DSW3 REEL SPEED', vals: ['normal', 'fast'], fmt: v => v.toUpperCase() },
+  { k: 'skillStop', label: 'DSW3 SKILL STOP', vals: [true, false], fmt: v => v ? 'ON' : 'OFF' },
+];
+function renderSvc() {
+  $('svRows').innerHTML = SV.map((R, i) => `<button class="sv" data-i="${i}"><span>${R.label}</span><b>${R.fmt(save.op[R.k])}</b></button>`).join('');
+  $('svRows').querySelectorAll('.sv').forEach(b => b.onclick = () => { const R = SV[+b.dataset.i]; save.op[R.k] = R.vals[(R.vals.indexOf(save.op[R.k]) + 1) % R.vals.length]; if (save.bet > save.op.maxBet) save.bet = save.op.maxBet; persist(); renderSvc(); ui(); });
+  $('svNote').innerHTML = `MAIN GAME RATE sets the long-run return of the main game incl. bonuses (simulated, bet 16, W-UP excluded). D-UP RATE is set by Jokers in the deck (7=LOSE: ${WUP_JOKERS.loss[90]}/${WUP_JOKERS.loss[80]} Jokers, 7=EVEN: ${WUP_JOKERS.tie[90]}/${WUP_JOKERS.tie[80]}). Bonus meters only count when the bet is at least MIN. BET. Fun credits only — no real money, nothing to buy.`;
+}
+$('svExit').onclick = () => { $('svc').classList.remove('on'); ui(); };
+$('svMeters').onclick = () => { save.meters = { cherry: 0, bell: 0 }; save.pool = 0; persist(); renderSvc(); };
+$('svCred').onclick = () => { save.credits = 100; save.bet = 8; persist(); ui(); };
+// ---------- layout + loop ----------
+function layout() { const vw = innerWidth, vh = innerHeight, phone = vw < vh, maxH = phone ? vh * .52 : vh - 210; let w = Math.min(vw - (phone ? 0 : 40), maxH * 4 / 3); cv.style.width = w + 'px'; cv.style.height = w * .75 + 'px'; }
+addEventListener('resize', layout); layout();
+let FREEZE = null;
+function loop(now) { requestAnimationFrame(loop); if (FREEZE != null) now = FREEZE; update(now); render(now); }
+requestAnimationFrame(loop); ui();
+window.__cc = { marker: CC_MARKER, G, save: () => save, force(g) { G.forced = g; }, forceCard(c) { G.forcedCard = c; }, setOp(o) { Object.assign(save.op, o); persist(); ui(); }, fast(v) { TS = v; }, freeze(v) { FREEZE = v; },
+  trigger(m) { if (G.phase !== 'idle' || G.bonus) return false; startBonus(m); return true; }, evalGrid, lineResult, lineBets, LINES, MOTION, wPos, travel, ORDER, SPEED, stopCol, stopAll, take, wupStart, wupGuess,
+  state: () => ({ phase: G.phase, credits: save.credits, bet: save.bet, win: G.win, wins: G.wins.map(w => ({ line: w.line + 1, kind: w.kind, pay: w.pay })), grid: G.grid, bonus: G.bonus && { ...G.bonus }, queue: G.queue.slice(), meters: { ...save.meters }, pool: save.pool, wup: G.wup && { amt: G.wup.amt, stage: G.wup.stage, res: G.wup.res }, msg: G.msg, stopLog: G.stopLog.slice(), hist: save.hist.slice() }) };
+
+</script></body></html>
