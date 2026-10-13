@@ -10,8 +10,9 @@ html,body{margin:0;height:100%;background:#000;color:#fff;font-family:"Courier N
 .row{display:flex;gap:8px;justify-content:center;width:100%;max-width:640px}
 .ab{flex:1;max-width:104px;min-height:58px;border-radius:8px;border:none;font:700 12px/1.15 "Courier New",monospace;color:#fff;text-shadow:0 1px 0 #000;box-shadow:inset 0 -6px 0 rgba(0,0,0,.35),0 3px 0 #000;cursor:pointer;padding:4px 2px;letter-spacing:.5px}
 .ab:active,.ab.dn{transform:translateY(2px);box-shadow:inset 0 -3px 0 rgba(0,0,0,.35),0 1px 0 #000}
-.ab.off{filter:saturate(.25) brightness(.45)}
-.ab.lit{animation:lit .6s steps(2) infinite}
+.ab.off{filter:saturate(.55) brightness(.72)}
+.ab b{font-size:14px}
+.ab.lit{animation:lit .6s steps(2) infinite;outline:2px solid #fff6;outline-offset:2px}
 @keyframes lit{50%{filter:brightness(1.6)}}
 .p{background:#a03cc0}.o{background:#b4641e}.r{background:#c8202c}.g{background:#1f9a38}.k{background:#333;max-width:150px;min-height:38px;font-size:11px}
 #svc{position:fixed;inset:0;background:rgba(0,0,0,.92);display:none;overflow:auto;padding:16px;z-index:9;color:#7dff8a;font:13px/1.4 "Courier New",monospace}
@@ -443,14 +444,14 @@ function persist() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(save));
 let TS = 1; // test time scale
 const K = 4, cv = $('scr'), ctx = cv.getContext('2d'); ctx.imageSmoothingEnabled = false;
 // ---- reel motion measured from the original cabinet: 15 symbols/s, stepped halving stop (1/2,1/4,1/8 speed) over 1.068 s ----
-const MOTION = { v: 15, Ta: .08, Td: 1.068, k: 1 / 4 };
+const MOTION = { v: 15, Ta: .08, Td: 1.068, Tq: .267, k: 1 / 4 }; // Tq: skill-stop uses the same stepped halving shape, 4x shorter (16 frames)
 const SPEED = { normal: { base: 1.4, stag: .6 }, fast: { base: .9, stag: .3 } };
 const ORDER = [3, 4, 5, 0, 1, 2, 6, 7, 8]; // stop order: middle row L→R, top row, bottom row
 const WX = [84, 163, 242], WY = [12, 72, 132], WW = 68, WH = 54, PITCH = 40, SYM = 34;
 const BG = { main: '#d6d2f6', cherry: '#fe86fe', bell: '#ffe680', bar: '#8ec8ff' };
 function decelFrac(u) { return 4 * (.5 * Math.min(u, .25) + .25 * clamp(u - .25, 0, .25) + .125 * clamp(u - .5, 0, .5)); }
-function travel(W, t) { const tau = t - W.delay; if (tau <= 0) return 0; if (tau < MOTION.Ta) return MOTION.v * tau * tau / (2 * MOTION.Ta); let d = MOTION.v * (Math.min(t, W.tD) - W.delay - MOTION.Ta / 2); if (t > W.tD) d += MOTION.v * MOTION.Td * MOTION.k * decelFrac(Math.min(1, (t - W.tD) / MOTION.Td)); return d; }
-function wPos(W, now) { if (!W.spinning) return W.L; const t = (now - W.t0) / 1000 * TS; return t >= W.tD + MOTION.Td ? W.L : W.P0 - travel(W, t); }
+function travel(W, t) { const tau = t - W.delay; if (tau <= 0) return 0; if (tau < MOTION.Ta) return MOTION.v * tau * tau / (2 * MOTION.Ta); let d = MOTION.v * (Math.min(t, W.tD) - W.delay - MOTION.Ta / 2); const Td = W.Td || MOTION.Td; if (t > W.tD) d += MOTION.v * Td * MOTION.k * decelFrac(Math.min(1, (t - W.tD) / Td)); return d; }
+function wPos(W, now) { if (!W.spinning) return W.L; const t = (now - W.t0) / 1000 * TS; return t >= W.tD + (W.Td || MOTION.Td) ? W.L : W.P0 - travel(W, t); }
 const G = { phase: 'idle', grid: null, wins: [], win: 0, ev: null, mode: 'main', bonus: null, queue: [], wup: null, msg: '', msgT: 0, forced: null, forcedCard: null, rng: mulberry(Date.now() % 1e9), vis: mulberry(12345), W: [], blink: 0, stopLog: [], spinT0: 0 };
 // initial windows
 for (let i = 0; i < 9; i++) { const st = {}; for (let k = -1; k <= 1; k++) st[k] = pick(G.vis, REELS.main); G.W.push({ strip: st, L: 0, spinning: false }); }
@@ -551,17 +552,17 @@ function buildWindows(grid, mode, now) {
     const r = Math.floor(w / 3), c = w % 3, o = ORDER.indexOf(w), tStop = sp.base + o * sp.stag, tD = tStop - M.Td, raw = M.v * (tD - M.Ta / 2) + M.v * M.Td * M.k, P0 = Math.max(4, Math.floor(raw)), delay = Math.max(0, (raw - P0) / M.v), st = {};
     st[-1] = pick(G.vis, REELS[mode]); st[0] = grid[r][c]; for (let i = 1; i < P0 - 1; i++) st[i] = pick(G.vis, REELS[mode]);
     for (let k = -1; k <= 1; k++) st[P0 + k] = old.strip[old.L + k] || pick(G.vis, REELS[mode]);
-    return { strip: st, P0, L: 0, delay, tD, t0: now, spinning: true, stopAt: now + tStop * 1000 / TS, o };
+    return { strip: st, P0, L: 0, delay, tD, Td: M.Td, t0: now, spinning: true, stopAt: now + tStop * 1000 / TS, o };
   });
 }
 function quickStop(w, delay = 0) { // keep cruising to the nearest slot still out of sight, then the same halving stop
   const W = G.W[w]; if (!W || !W.spinning || W.qs) return false; const now = performance.now(), t = (now - W.t0) / 1000 * TS + delay, te = Math.max(t, W.delay + MOTION.Ta);
-  if (te >= W.tD) return false; const p = W.P0 - travel(W, te), Dd = MOTION.v * MOTION.Td * MOTION.k, L = Math.floor(p - Dd), tD2 = te + (p - L - Dd) / MOTION.v;
-  if (tD2 >= W.tD) return false; const r = Math.floor(w / 3), c = w % 3; W.strip[L] = G.grid[r][c]; W.strip[L - 1] = pick(G.vis, REELS[G.mode]); W.strip[L + 1] = pick(G.vis, REELS[G.mode]);
-  W.L = L; W.tD = tD2; W.qs = true; W.stopAt = W.t0 + (tD2 + MOTION.Td) * 1000 / TS; return true;
+  if (te >= W.tD) return false; const p = W.P0 - travel(W, te), Tq = MOTION.Tq, Dd = MOTION.v * Tq * MOTION.k, L = Math.floor(p - Math.max(Dd, 2.3)), tD2 = te + (p - L - Dd) / MOTION.v;
+  if (tD2 + Tq >= W.tD + W.Td) return false; const r = Math.floor(w / 3), c = w % 3; W.strip[L] = G.grid[r][c]; W.strip[L - 1] = pick(G.vis, REELS[G.mode]); W.strip[L + 1] = pick(G.vis, REELS[G.mode]);
+  W.L = L; W.tD = tD2; W.Td = Tq; W.qs = true; W.stopAt = W.t0 + (tD2 + Tq) * 1000 / TS; return true;
 }
 function stopCol(c) { if (G.phase !== 'spin' || !save.op.skillStop) return false; for (const w of ORDER) if (w % 3 === c && quickStop(w)) return true; return false; }
-function stopAll() { if (G.phase !== 'spin' || !save.op.skillStop) return false; let k = 0, any = false; for (const w of ORDER) if (quickStop(w, k * .1)) { k++; any = true; } return any; }
+function stopAll() { if (G.phase !== 'spin' || !save.op.skillStop) return false; let k = 0, any = false; for (const w of ORDER) if (quickStop(w, k * .07)) { k++; any = true; } return any; }
 function startSpin() {
   if (G.phase !== 'idle') return; Sfx.unlock(); const B = G.bonus;
   if (!B) {
@@ -579,7 +580,7 @@ function update(now) {
   if (G.phase !== 'spin') return; let all = true;
   for (let w = 0; w < 9; w++) { const W = G.W[w]; if (!W.spinning) continue; if (now >= W.stopAt) { W.spinning = false; G.stopLog.push(w); Sfx.stop(); } else all = false; }
   if (!all && now - (G.lastTick || 0) > 66) { G.lastTick = now; Sfx.tick(); }
-  if (all) settle();
+  if (all) { settle(); ui(); }
 }
 function settle() {
   const ev = G.ev, B = G.bonus; G.wins = ev.wins; G.win = ev.sum;
@@ -639,10 +640,10 @@ for (const id in ACT) { const el = $(id); el.addEventListener('pointerdown', e =
 addEventListener('keydown', e => { const m = { KeyZ: 'b1', Digit1: 'b1', KeyX: 'b2', Digit2: 'b2', KeyC: 'b3', Digit3: 'b3', KeyV: 'b4', KeyD: 'b4', KeyB: 'bBet', Space: 'bStart', Enter: 'bStart', KeyT: 'b1' }[e.code]; if (m && !$('svc').classList.contains('on')) { e.preventDefault(); if (!e.repeat) ACT[m](); } });
 function ui() {
   const ph = G.phase, w = G.wup, sp = ph === 'spin' && save.op.skillStop, set = (id, label, on, lit) => { const el = $(id); el.innerHTML = label; el.classList.toggle('off', !on); el.classList.toggle('lit', !!lit); };
-  set('b1', 'STOP 1<br>TAKE', sp || ph === 'collect' || (ph === 'wup' && w.stage === 'result'), ph === 'collect');
-  set('b2', 'STOP 2<br>BIG', sp || (ph === 'wup' && w.stage === 'guess'), ph === 'wup' && w.stage === 'guess');
-  set('b3', 'STOP 3<br>SMALL', sp || (ph === 'wup' && w.stage === 'guess'), ph === 'wup' && w.stage === 'guess');
-  set('b4', 'STOP ALL<br>D-UP', sp || (ph === 'collect' && save.op.dup && !G.bonus) || (ph === 'wup' && w.stage === 'result'), ph === 'collect' && save.op.dup && !G.bonus);
+  set('b1', sp ? '<b>STOP 1</b><br>take' : 'STOP 1<br>TAKE', sp || ph === 'collect' || (ph === 'wup' && w.stage === 'result'), ph === 'collect' || sp);
+  set('b2', sp ? '<b>STOP 2</b><br>big' : 'STOP 2<br>BIG', sp || (ph === 'wup' && w.stage === 'guess'), (ph === 'wup' && w.stage === 'guess') || sp);
+  set('b3', sp ? '<b>STOP 3</b><br>small' : 'STOP 3<br>SMALL', sp || (ph === 'wup' && w.stage === 'guess'), (ph === 'wup' && w.stage === 'guess') || sp);
+  set('b4', sp ? '<b>STOP ALL</b><br>d-up' : 'STOP ALL<br>D-UP', sp || (ph === 'collect' && save.op.dup && !G.bonus) || (ph === 'wup' && w.stage === 'result'), (ph === 'collect' && save.op.dup && !G.bonus) || sp);
   set('bBet', `BET<br>${save.bet}`, ph === 'idle' && !G.bonus); set('bStart', G.bonus && ph === 'idle' ? 'START<br>FREE' : 'START', ph === 'idle' || sp || ph === 'collect', ph === 'idle' && !!G.bonus);
   $('bSnd').textContent = save.sound ? 'SOUND ON' : 'SOUND OFF'; Sfx.on = save.sound;
 }
