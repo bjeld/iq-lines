@@ -22,6 +22,7 @@ html,body{margin:0;height:100%;background:#000;color:#fff;font-family:"Courier N
 #ov{position:fixed;inset:0;background:rgba(0,0,0,.86);display:none;align-items:center;justify-content:center;z-index:20;padding:16px}
 #ov.on{display:flex}.ovc{max-width:420px;width:100%;background:#000;border:3px solid #1aa8a0;box-shadow:0 0 0 3px #063a36;padding:16px;text-align:center;font:700 14px/1.45 "Courier New",monospace;color:#fff}
 .ovc h3{margin:0 0 10px;color:#ffe75a;font-size:17px}.ovc p{margin:8px 0;color:#cfe}.ovc .btn{display:block;width:100%;margin:10px 0 0;font:700 15px "Courier New",monospace;padding:12px;border:0;border-radius:6px;cursor:pointer;color:#fff;box-shadow:inset 0 -5px 0 rgba(0,0,0,.35)}
+.cofcard{border:3px double #ffe75a;padding:12px;text-align:center}.cofh{color:#ff3030;font-size:15px;letter-spacing:2px}#cofCup{width:120px;height:90px;image-rendering:pixelated;margin:8px auto;display:block}.coft{color:#ffe75a;font-size:16px}.cofb{color:#8ec8ff;font-size:14px;margin:8px 0 12px;line-height:1.5}.blink{animation:bl 1s steps(2) infinite}@keyframes bl{50%{opacity:.25}}#cofGo:disabled{opacity:.5}
 .adcard{border:2px dashed #ffe75a;padding:14px}.adh{color:#ff3030;font-size:15px}.adb{margin:18px 0;font-size:22px;color:#8ec8ff}.adb small{font-size:11px;color:#9ab}.adt{font-size:34px;color:#ffe75a}
 #bTip{max-width:330px;background:#5a3a1a;color:#ffe7b8;font-size:12px;min-height:40px}
 #svNote{max-width:560px;color:#3fbf55;font-size:11.5px;margin-top:10px}
@@ -31,7 +32,7 @@ html,body{margin:0;height:100%;background:#000;color:#fff;font-family:"Courier N
  <div class="row"><button class="ab p" id="b1">STOP 1<br>TAKE</button><button class="ab o" id="b2">STOP 2<br>BIG</button><button class="ab r" id="b3">STOP 3<br>SMALL</button></div>
  <div class="row"><button class="ab r" id="bBet">BET</button><button class="ab r" id="b4">STOP ALL<br>D-UP</button><button class="ab g" id="bStart">START</button></div>
  <div class="row"><button class="ab k" id="bCoin">INSERT COIN</button><button class="ab k" id="bSvc">SERVICE</button><button class="ab k" id="bSnd">SOUND ON</button></div>
- <div class="row"><button class="ab k" id="bTip">☕ TIP A COFFEE – REMOVE ADS</button></div>
+ <div class="row"><button class="ab k" id="bTip">☕ TIP A COFFEE – REMOVE BREAKS</button></div>
 </div></div>
 <div id="ov"></div>
 <div id="svc"><h2>SERVICE MODE · DIP SWITCHES</h2><div id="svRows"></div>
@@ -40,9 +41,10 @@ html,body{margin:0;height:100%;background:#000;color:#fff;font-family:"Courier N
 // ======================= MONETIZATION CONFIG — edit these (see MONETIZATION_TODO.md) =======================
 const BMC_URL = 'https://buymeacoffee.com/YOUR_PAGE';      // your Buy Me a Coffee page (or the "Remove ads" shop item)
 const UNLOCK_CODE = 'CHANGE-ME-91';                         // BMC shop item redirect = <this page>?thanks=CHANGE-ME-91 (works on any domain)
-const AD_PROVIDER = 'none';                                 // 'none' | 'test' | 'adsense' | 'crazygames'  (add ?adtest=1 to the URL to preview test ads)
+const AD_PROVIDER = 'self';                                 // 'self' = own Buy-Me-a-Coffee promo cards (default, no trackers) | 'none' | 'test' | 'adsense' | 'crazygames' (dormant hooks)
 const INTERSTITIAL_MIN_GAP_MS = 10 * 60 * 1000;             // at most one interstitial per 10 min, only between sessions/rounds
-const REWARD_CREDITS = 500, FREE_REFILL = 100;
+const REWARD_CREDITS = 500, FREE_REFILL = 500;              // refill is always free (+500)
+const COFFEE_SKIP_SECS = 3;                                 // CONTINUE unlocks after this countdown
 // ===========================================================================================================
 // domain-agnostic: the thank-you URL is built from wherever the game is served (github.io today, own domain later)
 const THANKS_URL = () => location.origin + location.pathname + '?thanks=' + encodeURIComponent(UNLOCK_CODE);
@@ -69,6 +71,7 @@ const Ads = {
     if (!this.enabled() || !this.safeNow()) return false;
     if (Date.now() - (Mon.lastAd || 0) < INTERSTITIAL_MIN_GAP_MS) return false;
     Mon.lastAd = Date.now(); monSave();
+    if (AD_MODE === 'self') { coffeeCard(() => {}); return true; }
     if (AD_MODE === 'test') { adCard('AD BREAK (TEST)', 5, () => {}); return true; }
     if (AD_MODE === 'crazygames' && window.CrazyGames && CrazyGames.SDK) { CrazyGames.SDK.ad.requestAd('midgame', {}); return true; }
     if (AD_MODE === 'adsense' && window.adBreak) { adBreak({ type: 'next', name: reason }); return true; }
@@ -80,6 +83,22 @@ function ovClose() { const o = document.getElementById('ov'); o.classList.remove
 function adCard(title, secs, done) { // placeholder ad (test mode): retro card with countdown
   let left = secs; const o = ov(`<div class="adcard"><div class="adh">${title}</div><div class="adb">YOUR AD HERE<br><small>placeholder — no real ad network configured</small></div><div class="adt" id="adT">${left}</div></div>`);
   o.dataset.ad = '1'; const iv = setInterval(() => { left--; const t = document.getElementById('adT'); if (t) t.textContent = left; if (left <= 0) { clearInterval(iv); delete o.dataset.ad; ovClose(); done(); } }, 1000 / (window.TS_AD || 1));
+}
+
+// ---- self-promo "coffee break" card: own content, no third-party scripts/trackers ----
+const CUP = ['....s..s..s.....','.....s..s..s....','....s..s..s.....','................','.wwwwwwwwwwww...','.wbbbbbbbbbbwhh.','.wbbbbbbbbbbw..h','.wwwwwwwwwwww..h','.wwwwwwwwwwwwhh.','..wwwwwwwwww....','...wwwwwwww.....','pppppppppppppp..'];
+function drawCup(cv, t) { const x = cv.getContext('2d'), S = 5, C = { w: '#f4f0e6', b: '#6b3b1a', h: '#f4f0e6', p: '#ffe75a' }; x.clearRect(0, 0, cv.width, cv.height);
+  CUP.forEach((r, j) => [...r].forEach((c, i) => { if (c === '.') return; if (c === 's') { const ph = (t * 4 + i) % 3; if (j !== (2 - Math.floor(ph)) % 3 && (j + Math.floor(t * 3)) % 3 === 0) return; x.fillStyle = 'rgba(220,220,230,.75)'; x.fillRect(i * S + Math.round(Math.sin(t * 6 + j) * 2), j * S, S, S); return; } x.fillStyle = C[c]; x.fillRect(i * S, j * S, S, S); })); }
+function coffeeCard(done, extra = '') {
+  let left = COFFEE_SKIP_SECS; const o = ov(`<div class="cofcard"><div class="cofh">★ COFFEE BREAK ★</div><canvas id="cofCup" width="80" height="60"></canvas>
+<div class="coft blink">ENJOYING THE GAME?</div><div class="cofb">BUY THE DEV A COFFEE ☕<br>— REMOVES THESE BREAKS</div>${extra}
+<button class="btn" style="background:#b5651d" id="cofBuy">☕ BUY A COFFEE</button><button class="btn" style="background:#333" id="cofGo" disabled>CONTINUE (<span id="cofT">${left}</span>)</button></div>`);
+  o.dataset.ad = '1'; const cv = document.getElementById('cofCup'), t0 = performance.now(); let raf;
+  const anim = () => { if (!cv.isConnected) return; drawCup(cv, (performance.now() - t0) / 1000); raf = requestAnimationFrame(anim); }; anim();
+  document.getElementById('cofBuy').onclick = () => window.open(BMC_URL, '_blank', 'noopener');
+  const go = document.getElementById('cofGo'), fin = () => { cancelAnimationFrame(raf); delete o.dataset.ad; ovClose(); done(); };
+  const iv = setInterval(() => { left--; if (left > 0) { document.getElementById('cofT').textContent = left; return; } clearInterval(iv); go.disabled = false; go.textContent = 'CONTINUE ▶'; }, 1000 / (window.TS_AD || 1));
+  go.onclick = () => { if (!go.disabled) fin(); };
 }
 
 // ===== CHERRY CLASSIC '91 — game logic (a tribute to the 1991 Dyna classic). Runs in browser and node (sim.js). =====
@@ -722,12 +741,13 @@ $('svMeters').onclick = () => { save.meters = { cherry: 0, bell: 0 }; save.pool 
 $('svCred').onclick = () => { save.credits = 100; save.bet = 8; persist(); ui(); };
 // ---------- monetization UI (config + hooks in monet.js) ----------
 function checkRefill() { if (G.phase !== 'idle' || G.bonus || save.credits >= 1 || document.querySelector('#ov.on')) return; refillOffer(); }
-function refillOffer() {
-  const ad = Ads.enabled(); ov(`<h3>OUT OF CREDITS</h3><p>Fun credits only — no real money.</p>${ad ? `<button class="btn" style="background:#1f9a38" id="ovAd">▶ WATCH AD FOR +${REWARD_CREDITS} CREDITS</button>` : ''}<button class="btn" style="background:#333" id="ovFree">FREE REFILL +${FREE_REFILL}</button>`);
-  $('ovFree').onclick = () => { ovClose(); save.credits += FREE_REFILL; persist(); Sfx.coin(); msg(`FREE REFILL +${FREE_REFILL}`, 1500); ui(); };
-  if (ad) $('ovAd').onclick = () => { ovClose(); Ads.showRewarded(ok => { if (ok) { save.credits += REWARD_CREDITS; persist(); Sfx.bonus(); msg(`THANK YOU! +${REWARD_CREDITS}`, 2000); } else { save.credits += FREE_REFILL; persist(); msg(`FREE REFILL +${FREE_REFILL}`, 1500); } ui(); }); };
+function refillOffer() { // refill is always free; a gentle coffee card rides along unless unlocked
+  const give = () => { save.credits += FREE_REFILL; persist(); Sfx.coin(); msg(`FREE REFILL +${FREE_REFILL}`, 1500); ui(); };
+  if (Ads.enabled() && AD_MODE === 'self') { Mon.lastAd = Date.now(); monSave(); coffeeCard(give, `<div class="cofb" style="color:#7dff7d">OUT OF CREDITS? HAVE +${FREE_REFILL} ON THE HOUSE!</div>`); return; }
+  ov(`<h3>OUT OF CREDITS</h3><p>Fun credits only — no real money.</p><button class="btn" style="background:#333" id="ovFree">FREE REFILL +${FREE_REFILL}</button>`);
+  $('ovFree').onclick = () => { ovClose(); give(); };
 }
-function tipLabel() { $('bTip').textContent = Ads.noAds ? '☕ THANK YOU! ADS ARE OFF · TIP AGAIN' : '☕ TIP A COFFEE – REMOVE ADS'; }
+function tipLabel() { $('bTip').textContent = Ads.noAds ? '☕ THANK YOU! BREAKS ARE OFF · TIP AGAIN' : '☕ TIP A COFFEE – REMOVE BREAKS'; }
 $('bTip').onclick = () => { window.open(BMC_URL, '_blank', 'noopener'); };
 function firstRun() {
   const m = location.search.match(/[?&]thanks=([^&]+)/);
