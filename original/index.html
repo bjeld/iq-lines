@@ -38,7 +38,10 @@ html,body{margin:0;height:100%;background:#000;color:#fff;font-family:"Courier N
 <div id="svc"><h2>SERVICE MODE · DIP SWITCHES</h2><div id="svRows"></div>
 <button class="svb" id="svMeters">RESET METERS</button><button class="svb" id="svCred">RESET CREDITS</button><button class="svb" id="svExit">EXIT</button><div id="svNote"></div></div>
 <script>
-const CC_BUILD = '20261014011938';
+const CC_BUILD = '20261014090538';
+// ===== FEATURE FLAG: Buy-Me-a-Coffee cards, tip button and ?thanks unlock. Flip to true when the BMC link is ready. =====
+const FEATURE_COFFEE = false;
+const COFFEE_ON = FEATURE_COFFEE || /[?&]coffee=1/.test(location.search); // ?coffee=1 = preview only (not persisted)
 // ======================= MONETIZATION CONFIG — edit these (see MONETIZATION_TODO.md) =======================
 const BMC_URL = 'https://buymeacoffee.com/YOUR_PAGE';      // your Buy Me a Coffee page (or the "Remove ads" shop item)
 const UNLOCK_CODE = 'CHANGE-ME-91';                         // BMC shop item redirect = <this page>?thanks=CHANGE-ME-91 (works on any domain)
@@ -56,7 +59,7 @@ function monSave() { try { localStorage.setItem(MON_KEY, JSON.stringify(Mon)); }
 const AD_MODE = (/[?&]adtest=1/.test(location.search) ? 'test' : AD_PROVIDER);
 const Ads = {
   get noAds() { return !!Mon.noAds; },
-  enabled() { return !Mon.noAds && AD_MODE !== 'none'; },
+  enabled() { return COFFEE_ON && !Mon.noAds && AD_MODE !== 'none'; },
   safeNow() { return typeof G !== 'undefined' && G.phase === 'idle' && !G.bonus && !G.wup && !document.querySelector('#ov.on'); }, // never during spin / bonus / W-UP
   // ---- HOOK: rewarded ad. cb(true) = reward the player, cb(false) = no reward (error/skip) ----
   showRewarded(cb) {
@@ -757,14 +760,14 @@ function checkRefill() { if (G.phase !== 'idle' || G.bonus || save.credits >= 1 
 function refillOffer() { // refill is always free; a gentle coffee card rides along unless unlocked
   const give = () => { save.credits += FREE_REFILL; persist(); Sfx.coin(); msg(`FREE REFILL +${FREE_REFILL}`, 1500); ui(); };
   if (Ads.enabled() && AD_MODE === 'self') { Mon.lastAd = Date.now(); monSave(); coffeeCard(give, `<div class="cofb" style="color:#7dff7d">OUT OF CREDITS? HAVE +${FREE_REFILL} ON THE HOUSE!</div>`); return; }
-  ov(`<h3>OUT OF CREDITS</h3><p>Fun credits only — no real money.</p><button class="btn" style="background:#333" id="ovFree">FREE REFILL +${FREE_REFILL}</button>`);
-  $('ovFree').onclick = () => { ovClose(); give(); };
+  give(); // plain free refill, no prompt
 }
 function tipLabel() { $('bTip').textContent = Ads.noAds ? '☕ THANK YOU! BREAKS ARE OFF · TIP AGAIN' : '☕ TIP A COFFEE – REMOVE BREAKS'; }
+if (!COFFEE_ON) $('bTip').parentElement.style.display = 'none';
 $('bTip').onclick = () => { window.open(BMC_URL, '_blank', 'noopener'); };
 function firstRun() {
   const m = location.search.match(/[?&]thanks=([^&]+)/);
-  if (m) { history.replaceState(null, '', location.pathname); if (decodeURIComponent(m[1]) === UNLOCK_CODE) { Mon.noAds = true; monSave(); tipLabel(); ov(`<h3>☕ THANK YOU!</h3><p>Your coffee keeps CHERRY CLASSIC '91 running.</p><p>Ads are now switched off on this device.</p><button class="btn" style="background:#1f9a38" id="ovOk">PLAY</button>`); $('ovOk').onclick = () => { ovClose(); firstRun(); }; return; } }
+  if (m && COFFEE_ON) { history.replaceState(null, '', location.pathname); if (decodeURIComponent(m[1]) === UNLOCK_CODE) { Mon.noAds = true; monSave(); tipLabel(); ov(`<h3>☕ THANK YOU!</h3><p>Your coffee keeps CHERRY CLASSIC '91 running.</p><p>Ads are now switched off on this device.</p><button class="btn" style="background:#1f9a38" id="ovOk">PLAY</button>`); $('ovOk').onclick = () => { ovClose(); firstRun(); }; return; } }
   if (!Mon.notice) { ov(`<h3>CHERRY CLASSIC '91</h3><p><b>18+ ONLY.</b> For entertainment.</p><p>FUN CREDITS ONLY — no real money is wagered or won. Credits have no value, cannot be bought, cashed out or exchanged.</p><button class="btn" style="background:#1f9a38" id="noticeOk">I AM 18+ · PLAY</button>`);
     $('noticeOk').onclick = () => { Mon.notice = Date.now(); monSave(); ovClose(); }; return; }
   if (Mon.seen && Date.now() - Mon.seen > INTERSTITIAL_MIN_GAP_MS) Ads.showInterstitial('session'); Mon.seen = Date.now(); monSave();
@@ -777,7 +780,7 @@ function loop(now) { requestAnimationFrame(loop); if (FREEZE != null) now = FREE
 requestAnimationFrame(loop); ui(); tipLabel(); firstRun();
 // cache-busting: Safari may keep an old copy; check the live build id and reload once if newer
 (function freshCheck() {
-  if (location.protocol === 'file:' || location.search.includes('thanks=')) return;
+  if (location.protocol === 'file:' || location.search.includes('thanks=') || location.search.includes('coffee=1')) return;
   fetch(location.pathname + '?cb=' + Date.now(), { cache: 'no-store' }).then(r => r.text()).then(t => {
     const m = t.match(/CC_BUILD = '(\d+)'/); if (!m || m[1] === CC_BUILD) return;
     if (sessionStorage.getItem('cc.reloaded') === m[1]) return; sessionStorage.setItem('cc.reloaded', m[1]);
