@@ -38,7 +38,7 @@ html,body{margin:0;height:100%;background:#000;color:#fff;font-family:"Courier N
 <div id="svc"><h2>SERVICE MODE · DIP SWITCHES</h2><div id="svRows"></div>
 <button class="svb" id="svMeters">RESET METERS</button><button class="svb" id="svCred">RESET CREDITS</button><button class="svb" id="svExit">EXIT</button><div id="svNote"></div></div>
 <script>
-const CC_BUILD = '20261014090538';
+const CC_BUILD = '20261014092220';
 // ===== FEATURE FLAG: Buy-Me-a-Coffee cards, tip button and ?thanks unlock. Flip to true when the BMC link is ready. =====
 const FEATURE_COFFEE = false;
 const COFFEE_ON = FEATURE_COFFEE || /[?&]coffee=1/.test(location.search); // ?coffee=1 = preview only (not persisted)
@@ -163,11 +163,13 @@ function mainSpin(r, op, lb) { // payout-controlled main game result
   for (let k = 0; k < 3 && e.sum > 0 && r() < REDRAW[op.rate]; k++) { g = rollGrid(r, 'main'); e = evalGrid(g, lb); }
   return { grid: g, ev: e };
 }
+// keep meters in 0..cond-1 (repairs old saves / a lowered DSW condition: never shows a negative LAST n TIMES)
+function fixMeters(st, op) { const c = CONDITIONS[op.cond] || CONDITIONS['12-7-1']; const f = (v, n) => Number.isFinite(v) ? clamp(Math.floor(v), 0, n - 1) : 0; st.meters.cherry = f(st.meters.cherry, c[0]); st.meters.bell = f(st.meters.bell, c[1]); }
 // meters: returns list of bonuses earned this game (bet must reach the bonus min. bet)
 function applyMeters(st, ev, op) {
   const out = []; if (ev.B < op.minBet) return out; const cond = CONDITIONS[op.cond];
   for (let i = 0; i < ev.cherry3; i++) out.push('cherry'); // each 3-cherry line is its own Cherry Bonus (stacked)
-  st.meters.cherry += ev.cherryPairs; if (st.meters.cherry >= cond[0]) { st.meters.cherry = 0; out.push('cherry'); }
+  fixMeters(st, op); st.meters.cherry += ev.cherryPairs; if (st.meters.cherry >= cond[0]) { st.meters.cherry = 0; out.push('cherry'); } // extra pairs in the triggering spin are not carried over
   st.meters.bell += ev.bellLines; if (st.meters.bell >= cond[1]) { st.meters.bell = 0; out.push('bell'); }
   for (let i = 0; i < ev.bar1; i++) out.push('bar'); // each 1-BAR line = its own 7 free games
   if (ev.centerSeven) st.pool += Math.max(1, Math.round(ev.B / 2));
@@ -516,6 +518,7 @@ const SAVE_KEY = 'cherryclassic91.v1';
 const OP_DEFAULT = { rate: 85, dup: true, seven: 'loss', dupRate: 90, cond: '12-7-1', minBet: 16, maxBet: 64, speed: 'normal', skillStop: true };
 let save = { credits: 100, bet: 16, meters: { cherry: 0, bell: 0 }, pool: 0, hist: [], op: { ...OP_DEFAULT }, sound: true, games: 0 };
 try { const s = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null'); if (s) { save = Object.assign({}, save, s); save.op = Object.assign({}, OP_DEFAULT, s.op); save.meters = Object.assign({ cherry: 0, bell: 0 }, s.meters); } } catch (e) {}
+fixMeters(save, save.op);
 function persist() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch (e) {} }
 let TS = 1; // test time scale
 const K = 4, cv = $('scr'), ctx = cv.getContext('2d'); ctx.imageSmoothingEnabled = false;
@@ -546,13 +549,13 @@ function drawPanel(now) {
   ctx.save(); ctx.transform(1, 0, -.25, 1, 0, 0); otxt('CHERRY', 9, 4, 11, '#5aa8ff', '#002a80'); ctx.restore(); otxt("CLASSIC '91", 4, 15, 7, '#ffe75a', '#5a3a00');
   frame(4, 25, 62, 52, '#c8c8c8', '#444'); box(4, 25, 62, 52, '#000');
   box(5, 26, 60, 10, bm === 'cherry' && fl ? '#fff' : '#e8304a'); txt('Cherry Bonus', 35, 27, 7.5, bm === 'cherry' && fl ? '#e8304a' : '#fff', 'center');
-  txt('LAST', 6, 39, 7, '#fff'); box(25, 38, 14, 9, '#ffe75a'); txt(String(cond[0] - save.meters.cherry), 32, 39, 7.5, '#000', 'center'); txt('TIMES', 41, 39, 7, '#fff');
+  txt('LAST', 6, 39, 7, '#fff'); box(25, 38, 14, 9, '#ffe75a'); txt(String(Math.max(0, cond[0] - save.meters.cherry)), 32, 39, 7.5, '#000', 'center'); txt('TIMES', 41, 39, 7, '#fff');
   txt('OF', 6, 50, 7, '#fff'); mini('cherry', 22, 53); mini('cherry', 32, 53); txt('-', 42, 49, 7, '#e8304a');
   txt('OR', 6, 60, 6.5, '#fff'); txt('1X', 6, 68, 7, '#fff'); mini('cherry', 24, 71); mini('cherry', 34, 71); mini('cherry', 44, 71);
   txt('MIN. BET', 6, 80, 7, '#fff'); const lowB = !G.bonus && save.bet < op.minBet; txt(String(op.minBet), 50, 80, 7.5, lowB ? (fl ? '#ff2020' : '#401010') : '#ff4040'); if (lowB) txt('MIN. BET', 6, 80, 7, fl ? '#ff2020' : '#fff'); txt('FOR ANY BONUS', 4, 89, 6.2, '#fff');
   frame(4, 99, 62, 44, '#c8c8c8', '#444'); box(4, 99, 62, 44, '#000');
   box(5, 100, 60, 10, bm === 'bell' && fl ? '#fff' : '#ffd21a'); txt('Bell  Bonus', 35, 101, 7.5, '#000', 'center');
-  txt('AND POOL TAKE', 35, 112, 6, '#ffe75a', 'center'); txt('LAST', 6, 121, 7, '#fff'); box(25, 120, 14, 9, '#ffe75a'); txt(String(cond[1] - save.meters.bell), 32, 121, 7.5, '#000', 'center'); txt('TIMES', 41, 121, 7, '#fff');
+  txt('AND POOL TAKE', 35, 112, 6, '#ffe75a', 'center'); txt('LAST', 6, 121, 7, '#fff'); box(25, 120, 14, 9, '#ffe75a'); txt(String(Math.max(0, cond[1] - save.meters.bell)), 32, 121, 7.5, '#000', 'center'); txt('TIMES', 41, 121, 7, '#fff');
   txt('OF', 6, 133, 7, '#fff'); mini('bell', 26, 136); mini('bell', 37, 136); mini('bell', 48, 136);
   frame(4, 149, 62, 30, '#c8c8c8', '#444'); box(4, 149, 62, 30, '#000');
   box(5, 150, 60, 10, bm === 'bar' && fl ? '#ffe75a' : '#e8e8e8'); txt('1 Bar Bonus', 35, 151, 7.5, '#000', 'center');
@@ -592,7 +595,7 @@ function shade(hex, f) { const n = parseInt(hex.slice(1), 16), ch = [n >> 16, n 
 const SUITS = ['♠', '♥', '♦', '♣'], RANKS = ['', 'A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
 function drawCard(card, x, y, w, h, back) {
   box(x - 1, y - 1, w + 2, h + 2, '#000'); box(x, y, w, h, back ? '#1d3fb8' : '#fff');
-  if (back) { ctx.strokeStyle = '#8fb0ff'; ctx.lineWidth = .8; for (let k = -h; k < w; k += 5) { ctx.beginPath(); ctx.moveTo(x + k, y); ctx.lineTo(x + k + h, y + h); ctx.stroke(); } ctx.strokeStyle = '#fff'; ctx.strokeRect(x + 2, y + 2, w - 4, h - 4); return; }
+  if (back) { ctx.save(); ctx.beginPath(); ctx.rect(x, y, w, h); ctx.clip(); ctx.strokeStyle = '#8fb0ff'; ctx.lineWidth = .8; for (let k = -h; k < w; k += 5) { ctx.beginPath(); ctx.moveTo(x + k, y); ctx.lineTo(x + k + h, y + h); ctx.stroke(); } ctx.restore(); ctx.strokeStyle = '#fff'; ctx.strokeRect(x + 2, y + 2, w - 4, h - 4); return; }
   if (!card.rank) { txt('JOKER', x + w / 2, y + h / 2 - 5, Math.min(10, w / 4), '#8a00c0', 'center'); return; }
   const col = card.suit === 1 || card.suit === 2 ? '#d01818' : '#000';
   txt(RANKS[card.rank], x + 2, y + 2, Math.min(12, w / 3.2), col); txt(SUITS[card.suit], x + w / 2, y + h / 2 - w / 5, w / 2.4, col, 'center', 'normal');
@@ -749,7 +752,7 @@ const SV = [
 ];
 function renderSvc() {
   $('svRows').innerHTML = SV.map((R, i) => `<button class="sv" data-i="${i}"><span>${R.label}</span><b>${R.fmt(save.op[R.k])}</b></button>`).join('');
-  $('svRows').querySelectorAll('.sv').forEach(b => b.onclick = () => { const R = SV[+b.dataset.i]; save.op[R.k] = R.vals[(R.vals.indexOf(save.op[R.k]) + 1) % R.vals.length]; if (save.bet > save.op.maxBet) save.bet = save.op.maxBet; persist(); renderSvc(); ui(); });
+  $('svRows').querySelectorAll('.sv').forEach(b => b.onclick = () => { const R = SV[+b.dataset.i]; save.op[R.k] = R.vals[(R.vals.indexOf(save.op[R.k]) + 1) % R.vals.length]; if (save.bet > save.op.maxBet) save.bet = save.op.maxBet; fixMeters(save, save.op); persist(); renderSvc(); ui(); });
   $('svNote').innerHTML = `MAIN GAME RATE sets the long-run return of the main game incl. bonuses (simulated, bet 16, W-UP excluded). D-UP RATE is set by Jokers in the deck (7=LOSE: ${WUP_JOKERS.loss[90]}/${WUP_JOKERS.loss[80]} Jokers, 7=EVEN: ${WUP_JOKERS.tie[90]}/${WUP_JOKERS.tie[80]}). Bonus meters only count when the bet is at least MIN. BET. Fun credits only — no real money, nothing to buy.<br>BMC thank-you redirect for this site: <b>${THANKS_URL()}</b>`;
 }
 $('svExit').onclick = () => { $('svc').classList.remove('on'); ui(); };
