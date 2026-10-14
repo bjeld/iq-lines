@@ -38,7 +38,7 @@ html,body{margin:0;height:100%;background:#000;color:#fff;font-family:"Courier N
 <div id="svc"><h2>SERVICE MODE · DIP SWITCHES</h2><div id="svRows"></div>
 <button class="svb" id="svMeters">RESET METERS</button><button class="svb" id="svCred">RESET CREDITS</button><button class="svb" id="svExit">EXIT</button><div id="svNote"></div></div>
 <script>
-const CC_BUILD = '20261014092220';
+const CC_BUILD = '20261014234042';
 // ===== FEATURE FLAG: Buy-Me-a-Coffee cards, tip button and ?thanks unlock. Flip to true when the BMC link is ready. =====
 const FEATURE_COFFEE = false;
 const COFFEE_ON = FEATURE_COFFEE || /[?&]coffee=1/.test(location.search); // ?coffee=1 = preview only (not persisted)
@@ -509,6 +509,7 @@ const Sfx = {
   win(n) { const k = Math.min(5, 1 + Math.floor(Math.log2(1 + n / 10))); this.seq([72, 76, 79, 84, 79, 84, 88, 91].slice(0, 3 + k), .075); },
   count() { this.tone(2093, 0, .02, { v: .15 }); }, lose() { this.seq([64, 60, 55], .12, { type: 'triangle', v: .5 }); },
   bonus() { this.seq([72, 0, 72, 76, 79, 0, 79, 84, 88, 84, 88, 91, 96], .085); }, flip() { this.noise(0, .06, .2, 3000); this.tone(990, 0, .03, { v: .2 }); },
+  fanfare() { this.seq([72, 76, 79, 84, 0, 79, 84, 0, 88, 0, 84, 88, 91, 0, 96, 96, 96], .09); this.seq([48, 0, 55, 0, 52, 0, 55, 0, 53, 0, 57, 0, 55, 0, 60, 0, 60], .09, { type: 'triangle', v: .45 }); },
   wupWin() { this.seq([79, 84, 88, 91], .07); }, tie() { this.seq([72, 72], .1); },
 };
 
@@ -565,7 +566,7 @@ function lineCells(i) { return LINES[i].map(([r, c]) => [WX[c] + WW / 2, WY[r] +
 function drawReels(now) {
   const mode = G.mode, bg = BG[mode];
   // outer frame
-  frame(78, 6, 238, 184, '#1aa8a0', '#063a36'); box(78, 6, 238, 184, '#04121a');
+  const cs = celebState(now), cf = cs && Math.floor(cs.t / 90); frame(78, 6, 238, 184, cs ? CELEB_PAL[cf % CELEB_PAL.length] : '#1aa8a0', '#063a36'); box(78, 6, 238, 184, '#04121a');
   // red connectors
   ctx.strokeStyle = '#d01818'; ctx.lineWidth = 1.4;
   for (let r = 0; r < 3; r++) for (let c = 0; c < 2; c++) { const y = WY[r] + WH / 2; ctx.beginPath(); ctx.moveTo(WX[c] + WW, y); ctx.lineTo(WX[c + 1], y); ctx.stroke(); }
@@ -573,7 +574,10 @@ function drawReels(now) {
   [[WX[0] + WW, WY[0] + WH, WX[1], WY[1]], [WX[1] + WW, WY[1] + WH, WX[2], WY[2]], [WX[0] + WW, WY[2], WX[1], WY[1] + WH], [WX[1] + WW, WY[1], WX[2], WY[0] + WH]].forEach(([a, b, c, d]) => { ctx.beginPath(); ctx.moveTo(a, b); ctx.lineTo(c, d); ctx.stroke(); });
   for (let w = 0; w < 9; w++) {
     const r = Math.floor(w / 3), c = w % 3, x = WX[c], y = WY[r], W = G.W[w];
-    frame(x, y, WW, WH); const g = ctx.createLinearGradient(0, y, 0, y + WH); g.addColorStop(0, shade(bg, -.35)); g.addColorStop(.18, bg); g.addColorStop(.82, bg); g.addColorStop(1, shade(bg, -.35)); ctx.fillStyle = g; ctx.fillRect(x, y, WW, WH);
+    let cb = bg; if (cs) { const af = cs.C.kind === 'allfruit', ph = Math.floor(cs.t / 110);
+      if (af && cs.p < .55) { const k = CHASE.indexOf(w); if (k >= 0 && (ph - k) % 8 === 0 || k >= 0 && (ph - k + 8) % 8 === 0) cb = CELEB_PAL[ph % 5]; else if (w === 4) cb = CELEB_PAL[(ph >> 1) % 5]; }
+      else if (ph % 2 === 0) cb = af ? CELEB_PAL[(ph >> 1) % 5] : '#ffe75a'; }
+    frame(x, y, WW, WH, cs ? CELEB_PAL[(cf + w) % CELEB_PAL.length] : undefined); const g = ctx.createLinearGradient(0, y, 0, y + WH); g.addColorStop(0, shade(cb, -.35)); g.addColorStop(.18, cb); g.addColorStop(.82, cb); g.addColorStop(1, shade(cb, -.35)); ctx.fillStyle = g; ctx.fillRect(x, y, WW, WH);
     ctx.save(); ctx.beginPath(); ctx.rect(x, y, WW, WH); ctx.clip();
     const pos = wPos(W, now), i0 = Math.floor(pos) - 2;
     for (let i = i0; i <= i0 + 4; i++) { const s = W.strip[i]; if (!s || s === 'blank') continue; const yy = Math.round((y + WH / 2 + (i - pos) * PITCH) * K) / K; drawSprite(ctx, s, x + WW / 2, yy, s.startsWith('bar') || s === 'superbar' ? SYM * 1.08 : SYM); }
@@ -585,11 +589,19 @@ function drawReels(now) {
     for (const wi of G.wins) { const P = lineCells(wi.line); ctx.beginPath(); ctx.moveTo(P[0][0], P[0][1]); ctx.lineTo(P[2][0], P[2][1]); ctx.stroke();
       for (let k = 0; k < wi.cells; k++) { const [r, c] = LINES[wi.line][k]; ctx.strokeRect(WX[c] + 1, WY[r] + 1, WW - 2, WH - 2); } }
   }
+  if (cs && cs.C.kind === 'allfruit') drawBanner(now, cs);
   // line tabs: 4 6 7 8 on top, 2 1 3 left, 5 bottom-left
   const B = lb(), won = new Set(G.phase === 'collect' ? G.wins.map(w => w.line) : []), fl = Math.floor(now / 300) % 2;
   const tab = (n, x, y) => { const on = B[n - 1] > 0, hot = won.has(n - 1) && fl; box(x, y, 9, 8, hot ? '#ff3030' : on ? '#ffd21a' : '#5a5a3a'); txt(String(n), x + 4.5, y + .5, 7.5, '#000', 'center'); };
   tab(4, 69, 0); tab(6, WX[0] + 28, 0); tab(7, WX[1] + 28, 0); tab(8, WX[2] + 28, 0);
   tab(2, 68, WY[0] + 23); tab(1, 68, WY[1] + 23); tab(3, 68, WY[2] + 23); tab(5, 69, 186);
+}
+function drawBanner(now, cs) { // blocky plate "ALL FRUIT!" with per-letter colour cycling and a count-up
+  const pop = Math.min(1, cs.t / 200), w = 196 * pop, h = 52 * pop, x = 197 - w / 2, y = 72 - h / 2; if (pop < .2) return;
+  box(x - 3, y - 3, w + 6, h + 6, '#000'); box(x - 2, y - 2, w + 4, h + 4, CELEB_PAL[Math.floor(cs.t / 90) % 6]); box(x, y, w, h, '#1a0838');
+  for (let i = 0; i < 14; i++) { const on = (Math.floor(cs.t / 90) + i) % 2; box(x + 4 + i * (w - 8) / 14, y + 3, 4, 3, on ? '#ffe75a' : '#5a3a00'); box(x + 4 + i * (w - 8) / 14, y + h - 6, 4, 3, on ? '#5a3a00' : '#ffe75a'); }
+  if (pop < 1) return; const s = 'ALL FRUIT!', fs = 22, cw = 17.4; for (let i = 0; i < s.length; i++) otxt(s[i], x + 12 + i * cw + cw / 2, y + 9 + (Math.floor(cs.t / 120 + i) % 2), fs, CELEB_PAL[(Math.floor(cs.t / 100) + i) % 5], '#000', 'center');
+  const v = Math.round(cs.C.amt * Math.min(1, cs.t / (cs.C.dur * TS * .75))); otxt(String(v), x + w / 2, y + 33, 11, '#fff', '#000', 'center');
 }
 function shade(hex, f) { const n = parseInt(hex.slice(1), 16), ch = [n >> 16, n >> 8 & 255, n & 255].map(v => Math.round(clamp(f < 0 ? v * (1 + f) : v + (255 - v) * f, 0, 255))); return `rgb(${ch})`; }
 const SUITS = ['♠', '♥', '♦', '♣'], RANKS = ['', 'A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
@@ -617,6 +629,7 @@ function drawBottom(now) {
   let m = G.msg; if (G.msgT && now > G.msgT) { G.msg = ''; G.msgT = 0; m = ''; }
   if (!m) m = G.phase === 'spin' ? '' : save.credits < 1 && !G.bonus ? (Math.floor(now / 600) % 2 ? 'INSERT COIN' : '') : G.bonus ? `${{ cherry: 'CHERRY', bell: 'BELL', bar: '1 BAR' }[G.bonus.mode]} BONUS${G.bonus.tag || ''}` : 'PRESS START';
   txt(m, 160, 206, 12, '#fff', 'center');
+  const cs = celebState(now); if (cs) { const v = Math.round(cs.C.amt * Math.min(1, cs.t / (cs.C.dur * TS * .75))); if (v !== cs.C.last && now - (cs.C.tk || 0) > 45) { cs.C.tk = now; Sfx.count(); } cs.C.last = v; txt(`WIN ${v}`, 160, 222, 9, Math.floor(now / 120) % 2 ? '#ffe75a' : '#fff', 'center'); }
   if (G.win && (G.phase === 'collect' || G.phase === 'count')) txt(`WIN ${G.win}`, 160, 222, 9, '#ffe75a', 'center');
   if (G.bonus) txt(G.bonus.mode === 'cherry' ? 'CHERRY BONUS GAME' : `FREE GAME ${Math.min(FREE_GAMES, G.bonus.done + (G.phase === 'spin' ? 1 : 0))}/${FREE_GAMES} · ${G.bonus.total}`, 160, 231, 6.5, '#ffd21a', 'center');
 }
@@ -668,11 +681,26 @@ function settle() {
     if (ev.B < save.op.minBet && (ev.cherry3 || ev.bar1)) { G.missed = true; Sfx.lose(); } else G.missed = false; }
   else { B.done++; B.total += ev.sum; }
   persist();
-  if (G.win > 0) { Sfx.win(G.win); const parts = []; if (ev.allFruit) parts.push(`ALL FRUIT ${ev.allFruit}`); if (ev.sevensPay) parts.push(`${ev.sevens} SEVENS ${ev.sevensPay}`); if (ev.bellPay) parts.push(`${ev.bells} BELLS ${ev.bellPay}`);
-    if (B || !save.op.dup) { G.phase = 'collect'; msg(parts[0] || `WIN ${G.win}`); ui(); setTimeout(() => take(), 1400 / TS); }
-    else { G.phase = 'collect'; msg(parts[0] || 'TAKE OR D-UP'); ui(); }
-    if (G.missed) missHint(parts[0] || (B || !save.op.dup ? `WIN ${G.win}` : 'TAKE OR D-UP')); }
+  if (G.win > 0) { const big = ev.allFruit ? 'allfruit' : ev.wins.some(w => w.kind === 'seven' || w.kind === 'superbar') || (B && ev.sum >= 20 * Math.max(1, ev.B / 8)) ? 'big' : null;
+    if (big) { startCeleb(big, ev); return; }
+    presentWin(); }
   else { if (B && B.mode === 'cherry') msg('NO SEVENS', 1200); afterRound(); }
+}
+// ---- 1991-style win celebration: chase lights over the 9 windows, flashing frames, banner, count-up, fanfare ----
+const CELEB_PAL = ['#ff3030', '#ffe75a', '#30ff60', '#30c8ff', '#ff60ff', '#ffffff'], CHASE = [0, 1, 2, 5, 8, 7, 6, 3];
+function startCeleb(kind, ev) {
+  const dur = kind === 'allfruit' ? 2800 : 1300; G.phase = 'celeb'; G.celeb = { kind, t0: performance.now(), dur: dur / TS, amt: G.win, last: 0 };
+  msg(kind === 'allfruit' ? `ALL FRUIT ${ev.allFruit}` : `BIG WIN ${G.win}`); if (kind === 'allfruit') Sfx.fanfare(); else Sfx.win(G.win * 10);
+  G.celeb.tm = setTimeout(endCeleb, G.celeb.dur); ui();
+}
+function endCeleb() { if (G.phase !== 'celeb') return; clearTimeout(G.celeb.tm); G.celeb = null; G.phase = 'idle'; presentWin(true); }
+function celebState(now) { const C = G.celeb; if (!C) return null; const t = Math.max(0, now - C.t0) * TS; return { C, t, p: Math.min(1, t / (C.dur * TS)) }; }
+function presentWin(quiet) {
+  const ev = G.ev, B = G.bonus; G.phase = 'idle';
+  { if (!quiet) Sfx.win(G.win); const parts = []; if (ev.allFruit) parts.push(`ALL FRUIT ${ev.allFruit}`); if (ev.sevensPay) parts.push(`${ev.sevens} SEVENS ${ev.sevensPay}`); if (ev.bellPay) parts.push(`${ev.bells} BELLS ${ev.bellPay}`);
+    if (B || !save.op.dup) { G.phase = 'collect'; msg(parts[0] || `WIN ${G.win}`); ui(); setTimeout(() => take(), 1400 / TS); }
+    else { G.phase = 'collect'; msg(quiet ? 'TAKE OR D-UP' : parts[0] || 'TAKE OR D-UP'); ui(); }
+    if (G.missed) missHint(parts[0] || (B || !save.op.dup ? `WIN ${G.win}` : 'TAKE OR D-UP')); }
 }
 function missHint(back) { // a bonus trigger landed but bet < MIN. BET: say so, then restore the normal message
   const t = `BONUS NEEDS BET ${save.op.minBet}`; msg(t); ui(); setTimeout(() => { if (G.msg === t) { msg(back); ui(); } }, 2200 / TS);
@@ -727,8 +755,8 @@ const ACT = {
   bSvc: () => { if (G.phase !== 'idle' || G.bonus) return; renderSvc(); $('svc').classList.add('on'); },
   bSnd: () => { save.sound = !save.sound; Sfx.on = save.sound; persist(); ui(); },
 };
-for (const id in ACT) { const el = $(id); el.addEventListener('pointerdown', e => { e.preventDefault(); Sfx.unlock(); el.classList.add('dn'); ACT[id](); }); el.addEventListener('pointerup', () => el.classList.remove('dn')); el.addEventListener('pointerleave', () => el.classList.remove('dn')); }
-addEventListener('keydown', e => { const m = { KeyZ: 'b1', Digit1: 'b1', KeyX: 'b2', Digit2: 'b2', KeyC: 'b3', Digit3: 'b3', KeyV: 'b4', KeyD: 'b4', KeyB: 'bBet', Space: 'bStart', Enter: 'bStart', KeyT: 'b1' }[e.code]; if (m && !$('svc').classList.contains('on') && !$('ov').classList.contains('on')) { e.preventDefault(); if (!e.repeat) ACT[m](); } });
+for (const id in ACT) { const el = $(id); el.addEventListener('pointerdown', e => { e.preventDefault(); Sfx.unlock(); el.classList.add('dn'); if (G.phase === 'celeb') { endCeleb(); return; } ACT[id](); }); el.addEventListener('pointerup', () => el.classList.remove('dn')); el.addEventListener('pointerleave', () => el.classList.remove('dn')); }
+addEventListener('keydown', e => { if (G.phase === 'celeb') { e.preventDefault(); endCeleb(); return; } const m = { KeyZ: 'b1', Digit1: 'b1', KeyX: 'b2', Digit2: 'b2', KeyC: 'b3', Digit3: 'b3', KeyV: 'b4', KeyD: 'b4', KeyB: 'bBet', Space: 'bStart', Enter: 'bStart', KeyT: 'b1' }[e.code]; if (m && !$('svc').classList.contains('on') && !$('ov').classList.contains('on')) { e.preventDefault(); if (!e.repeat) ACT[m](); } });
 function ui() {
   const ph = G.phase, w = G.wup, sp = ph === 'spin' && save.op.skillStop, set = (id, label, on, lit) => { const el = $(id); el.innerHTML = label; el.classList.toggle('off', !on); el.classList.toggle('lit', !!lit); };
   set('b1', sp ? '<b>STOP 1</b><br>take' : 'STOP 1<br>TAKE', sp || ph === 'collect' || (ph === 'wup' && w.stage === 'result'), ph === 'collect' || sp);
@@ -790,7 +818,8 @@ requestAnimationFrame(loop); ui(); tipLabel(); firstRun();
     location.replace(location.pathname + '?v=' + m[1]);
   }).catch(() => {});
 })();
-window.__cc = { marker: CC_MARKER, build: CC_BUILD, maybeCoffee, missHint, Ads, Mon, checkRefill, adMode: AD_MODE, G, save: () => save, force(g) { G.forced = g; }, forceCard(c) { G.forcedCard = c; }, setOp(o) { Object.assign(save.op, o); persist(); ui(); }, fast(v) { TS = v; }, freeze(v) { FREEZE = v; },
+$('scr').addEventListener('pointerdown', () => { if (G.phase === 'celeb') endCeleb(); });
+window.__cc = { marker: CC_MARKER, endCeleb, celeb: () => G.celeb && { kind: G.celeb.kind, amt: G.celeb.amt }, build: CC_BUILD, maybeCoffee, missHint, Ads, Mon, checkRefill, adMode: AD_MODE, G, save: () => save, force(g) { G.forced = g; }, forceCard(c) { G.forcedCard = c; }, setOp(o) { Object.assign(save.op, o); persist(); ui(); }, fast(v) { TS = v; }, freeze(v) { FREEZE = v; },
   trigger(m) { if (G.phase !== 'idle' || G.bonus) return false; startBonus(m); return true; }, evalGrid, lineResult, lineBets, LINES, MOTION, wPos, travel, ORDER, SPEED, stopCol, stopAll, take, wupStart, wupGuess,
   state: () => ({ phase: G.phase, credits: save.credits, bet: save.bet, win: G.win, wins: G.wins.map(w => ({ line: w.line + 1, kind: w.kind, pay: w.pay })), grid: G.grid, bonus: G.bonus && { ...G.bonus }, queue: G.queue.slice(), meters: { ...save.meters }, pool: save.pool, wup: G.wup && { amt: G.wup.amt, stage: G.wup.stage, res: G.wup.res }, msg: G.msg, stopLog: G.stopLog.slice(), hist: save.hist.slice() }) };
 
