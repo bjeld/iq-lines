@@ -38,7 +38,7 @@ html,body{margin:0;height:100%;background:#000;color:#fff;font-family:"Courier N
 <div id="svc"><h2>SERVICE MODE · DIP SWITCHES</h2><div id="svRows"></div>
 <button class="svb" id="svMeters">RESET METERS</button><button class="svb" id="svCred">RESET CREDITS</button><button class="svb" id="svExit">EXIT</button><div id="svNote"></div></div>
 <script>
-const CC_BUILD = '20261014234042';
+const CC_BUILD = '20261015174845';
 // ===== FEATURE FLAG: Buy-Me-a-Coffee cards, tip button and ?thanks unlock. Flip to true when the BMC link is ready. =====
 const FEATURE_COFFEE = false;
 const COFFEE_ON = FEATURE_COFFEE || /[?&]coffee=1/.test(location.search); // ?coffee=1 = preview only (not persisted)
@@ -504,13 +504,25 @@ const Sfx = {
   tone(f, t0, d, { type = 'square', v = .5, slide = 0 } = {}) { const a = this.ctx; if (!a || !this.on) return; const o = a.createOscillator(), g = a.createGain(), t = a.currentTime + t0; o.type = type; o.frequency.setValueAtTime(f, t); if (slide) o.frequency.exponentialRampToValueAtTime(Math.max(30, f * slide), t + d); g.gain.setValueAtTime(v, t); g.gain.setValueAtTime(v * .7, t + d * .7); g.gain.linearRampToValueAtTime(0, t + d); o.connect(g); g.connect(this.master); o.start(t); o.stop(t + d + .02); },
   noise(t0, d, v = .3, hp = 1200) { const a = this.ctx; if (!a || !this.on) return; const n = Math.floor(a.sampleRate * d), b = a.createBuffer(1, n, a.sampleRate), x = b.getChannelData(0); for (let i = 0; i < n; i++) x[i] = Math.random() * 2 - 1; const s = a.createBufferSource(), f = a.createBiquadFilter(), g = a.createGain(), t = a.currentTime + t0; s.buffer = b; f.type = 'highpass'; f.frequency.value = hp; g.gain.setValueAtTime(v, t); g.gain.exponentialRampToValueAtTime(.001, t + d); s.connect(f); f.connect(g); g.connect(this.master); s.start(t); },
   seq(notes, step = .07, opt) { notes.forEach((m, i) => m && this.tone(440 * 2 ** ((m - 69) / 12), i * step, step * .9, opt)); },
-  coin() { this.seq([84, 91], .06); }, bet() { this.tone(1320, 0, .04, { v: .35 }); }, start() { this.tone(220, 0, .12, { slide: 2 }); this.noise(0, .08, .15); },
-  tick() { this.tone(1800, 0, .012, { v: .12 }); }, stop() { this.tone(160, 0, .07, { v: .5, slide: .5 }); this.noise(0, .05, .2, 600); },
-  win(n) { const k = Math.min(5, 1 + Math.floor(Math.log2(1 + n / 10))); this.seq([72, 76, 79, 84, 79, 84, 88, 91].slice(0, 3 + k), .075); },
-  count() { this.tone(2093, 0, .02, { v: .15 }); }, lose() { this.seq([64, 60, 55], .12, { type: 'triangle', v: .5 }); },
-  bonus() { this.seq([72, 0, 72, 76, 79, 0, 79, 84, 88, 84, 88, 91, 96], .085); }, flip() { this.noise(0, .06, .2, 3000); this.tone(990, 0, .03, { v: .2 }); },
-  fanfare() { this.seq([72, 76, 79, 84, 0, 79, 84, 0, 88, 0, 84, 88, 91, 0, 96, 96, 96], .09); this.seq([48, 0, 55, 0, 52, 0, 55, 0, 53, 0, 57, 0, 55, 0, 60, 0, 60], .09, { type: 'triangle', v: .45 }); },
-  wupWin() { this.seq([79, 84, 88, 91], .07); }, tie() { this.seq([72, 72], .1); },
+  // ---- retuned v2 to the character of the 1991 cabinet (ref/REF_AUDIO.md); all original note patterns ----
+  coin() { this.seq([79, 86, 91], .045, { v: .4 }); },
+  bet() { this.tone(1046, 0, .03, { v: .3 }); this.tone(523, .03, .03, { v: .25 }); },
+  start() { this.tone(260, 0, .05, { v: .55, slide: .7 }); this.noise(0, .06, .25, 2500); },
+  // reel cruise: low two-tone pulse (~300/345 Hz, 60 ms) with a ~880 Hz blip every 5th step (0.3 s cycle)
+  tick() { this.k = (this.k || 0) + 1; const hi = this.k % 5 === 0; this.tone(this.k % 2 ? 300 : 345, 0, .04, { v: .16 }); if (hi) this.tone(880, 0, .03, { v: .12 }); },
+  // reel stop: low thud with a short pitch drop + bright 3.4 kHz click tail (~0.25 s)
+  stop() { this.tone(230, 0, .09, { v: .6, slide: .55 }); this.tone(115, .0, .14, { type: 'triangle', v: .45, slide: .8 }); this.noise(0, .22, .14, 3400); },
+  // line win: rising arpeggio from A3 to C5 (~60 ms steps), held top note with high sparkle; longer for bigger wins
+  win(n) { const k = Math.min(4, Math.floor(Math.log2(1 + n / 20))), base = [57, 60, 65, 67, 72]; let notes = base.slice(); for (let i = 0; i < k; i++) notes.push(...base.slice(1).map(m => m + 12 * Math.min(1, (i + 1) >> 1)));
+    this.seq(notes, .06, { v: .45 }); const t = notes.length * .06; this.tone(523, t, .35, { v: .4 }); this.tone(3136, t, .3, { type: 'square', v: .05 }); },
+  // TAKE SCORE wait warble: A4 / E6 alternating (~30 ms each)
+  warble() { this.tone(440, 0, .028, { v: .12 }); this.tone(1318, .03, .028, { v: .09 }); },
+  count() { this.tone(1318, 0, .018, { v: .14 }); this.tone(440, .02, .015, { v: .1 }); },
+  lose() { this.tone(174, 0, .16, { v: .55 }); this.tone(130, .16, .14, { v: .45 }); },
+  bonus() { this.seq([60, 64, 67, 72, 0, 67, 72, 76, 0, 72, 76, 79, 84, 84], .07, { v: .45 }); this.seq([48, 0, 0, 48, 0, 55, 0, 0, 55, 0, 60, 0, 60, 60], .07, { type: 'triangle', v: .4 }); },
+  flip() { this.noise(0, .05, .22, 2600); this.tone(784, 0, .025, { v: .22 }); },
+  fanfare() { this.seq([57, 60, 65, 67, 72, 0, 67, 72, 76, 0, 72, 76, 79, 84, 0, 84, 84, 84], .08, { v: .45 }); this.seq([45, 0, 52, 0, 53, 0, 55, 0, 57, 0, 55, 0, 60, 0, 60, 0, 48, 48], .08, { type: 'triangle', v: .42 }); this.tone(3136, 18 * .08, .4, { v: .05 }); },
+  wupWin() { this.seq([57, 60, 65, 67, 72], .05, { v: .45 }); this.tone(523, .25, .25, { v: .4 }); }, tie() { this.seq([67, 67], .1, { v: .4 }); },
 };
 
 // ===== CHERRY CLASSIC '91 — app (screen 320x240 logical, drawn at 4x) =====
@@ -670,9 +682,10 @@ function startSpin() {
   buildWindows(grid, G.mode, performance.now()); G.phase = 'spin'; msg(''); Sfx.start(); persist(); ui();
 }
 function update(now) {
+  if (G.phase === 'collect' && !G.bonus && save.op.dup && now - (G.lastWb || 0) > 360) { G.lastWb = now; Sfx.warble(); }
   if (G.phase !== 'spin') return; let all = true;
   for (let w = 0; w < 9; w++) { const W = G.W[w]; if (!W.spinning) continue; if (now >= W.stopAt) { W.spinning = false; G.stopLog.push(w); Sfx.stop(); } else all = false; }
-  if (!all && now - (G.lastTick || 0) > 66) { G.lastTick = now; Sfx.tick(); }
+  if (!all && now - (G.lastTick || 0) > 60) { G.lastTick = now; Sfx.tick(); }
   if (all) { settle(); ui(); }
 }
 function settle() {
