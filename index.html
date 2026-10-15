@@ -38,7 +38,7 @@ html,body{margin:0;height:100%;background:#000;color:#fff;font-family:"Courier N
 <div id="svc"><h2>SERVICE MODE · DIP SWITCHES</h2><div id="svRows"></div>
 <button class="svb" id="svMeters">RESET METERS</button><button class="svb" id="svCred">RESET CREDITS</button><button class="svb" id="svExit">EXIT</button><div id="svNote"></div></div>
 <script>
-const CC_BUILD = '20261015174845';
+const CC_BUILD = '20261015182033';
 // ===== FEATURE FLAG: Buy-Me-a-Coffee cards, tip button and ?thanks unlock. Flip to true when the BMC link is ready. =====
 const FEATURE_COFFEE = false;
 const COFFEE_ON = FEATURE_COFFEE || /[?&]coffee=1/.test(location.search); // ?coffee=1 = preview only (not persisted)
@@ -678,13 +678,13 @@ function startSpin() {
   let grid, ev; const L = lb();
   if (B) { grid = G.forced || rollGrid(G.rng, B.mode); ev = evalGrid(grid, L, B.mode); }
   else if (G.forced) { grid = G.forced; ev = evalGrid(grid, L); } else ({ grid, ev } = mainSpin(G.rng, save.op, L));
-  G.forced = null; G.grid = grid; G.ev = ev; G.wins = []; G.win = 0; G.stopLog = []; G.spinT0 = performance.now();
+  G.forced = null; G.thuds = 0; G.grid = grid; G.ev = ev; G.wins = []; G.win = 0; G.stopLog = []; G.spinT0 = performance.now();
   buildWindows(grid, G.mode, performance.now()); G.phase = 'spin'; msg(''); Sfx.start(); persist(); ui();
 }
 function update(now) {
   if (G.phase === 'collect' && !G.bonus && save.op.dup && now - (G.lastWb || 0) > 360) { G.lastWb = now; Sfx.warble(); }
   if (G.phase !== 'spin') return; let all = true;
-  for (let w = 0; w < 9; w++) { const W = G.W[w]; if (!W.spinning) continue; if (now >= W.stopAt) { W.spinning = false; G.stopLog.push(w); Sfx.stop(); } else all = false; }
+  for (let w = 0; w < 9; w++) { const W = G.W[w]; if (!W.spinning) continue; if (now >= W.stopAt) { W.spinning = false; G.stopLog.push(w); const c = w % 3; if (![c, c + 3, c + 6].some(i => G.W[i].spinning)) { Sfx.stop(); G.thuds = (G.thuds || 0) + 1; } } else all = false; }
   if (!all && now - (G.lastTick || 0) > 60) { G.lastTick = now; Sfx.tick(); }
   if (all) { settle(); ui(); }
 }
@@ -834,6 +834,6 @@ requestAnimationFrame(loop); ui(); tipLabel(); firstRun();
 $('scr').addEventListener('pointerdown', () => { if (G.phase === 'celeb') endCeleb(); });
 window.__cc = { marker: CC_MARKER, endCeleb, celeb: () => G.celeb && { kind: G.celeb.kind, amt: G.celeb.amt }, build: CC_BUILD, maybeCoffee, missHint, Ads, Mon, checkRefill, adMode: AD_MODE, G, save: () => save, force(g) { G.forced = g; }, forceCard(c) { G.forcedCard = c; }, setOp(o) { Object.assign(save.op, o); persist(); ui(); }, fast(v) { TS = v; }, freeze(v) { FREEZE = v; },
   trigger(m) { if (G.phase !== 'idle' || G.bonus) return false; startBonus(m); return true; }, evalGrid, lineResult, lineBets, LINES, MOTION, wPos, travel, ORDER, SPEED, stopCol, stopAll, take, wupStart, wupGuess,
-  state: () => ({ phase: G.phase, credits: save.credits, bet: save.bet, win: G.win, wins: G.wins.map(w => ({ line: w.line + 1, kind: w.kind, pay: w.pay })), grid: G.grid, bonus: G.bonus && { ...G.bonus }, queue: G.queue.slice(), meters: { ...save.meters }, pool: save.pool, wup: G.wup && { amt: G.wup.amt, stage: G.wup.stage, res: G.wup.res }, msg: G.msg, stopLog: G.stopLog.slice(), hist: save.hist.slice() }) };
+  state: () => ({ thuds: G.thuds || 0, phase: G.phase, credits: save.credits, bet: save.bet, win: G.win, wins: G.wins.map(w => ({ line: w.line + 1, kind: w.kind, pay: w.pay })), grid: G.grid, bonus: G.bonus && { ...G.bonus }, queue: G.queue.slice(), meters: { ...save.meters }, pool: save.pool, wup: G.wup && { amt: G.wup.amt, stage: G.wup.stage, res: G.wup.res }, msg: G.msg, stopLog: G.stopLog.slice(), hist: save.hist.slice() }) };
 
 </script></body></html>
